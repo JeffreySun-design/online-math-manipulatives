@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>幾何小探險 - 國小數學互動教具</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', '"Fredoka"', 'sans-serif'],
+          },
+          colors: {
+            primary: '#4F46E5',
+            secondary: '#10B981',
+            accent: '#F59E0B',
+            background: '#F3F4F6',
+          },
+          animation: {
+            'fade-in-up': 'fadeInUp 0.5s ease-out',
+          },
+          keyframes: {
+            fadeInUp: {
+              '0%': { opacity: '0', transform: 'translateY(10px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & ReactDOM (UMD - More stable for standalone HTML) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      background-color: #F3F4F6;
+      overflow-x: hidden;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.33.0"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Main Application Script -->
+  <script type="text/babel">
+    const { useState, useMemo, useEffect, useRef } = React;
+    const { createRoot } = ReactDOM;
+
+    // ----------------------------------------------------------------------
+    // 資料常數
+    // ----------------------------------------------------------------------
+
+    const LEVEL_1 = [
+      [[1, 1, 1], [1, 1, 1], [1, 1, 1]], // Bottom
+      [[0, 0, 0], [0, 1, 0], [0, 0, 0]], // Middle
+      [[0, 0, 0], [0, 0, 0], [0, 0, 0]]  // Top
+    ];
+
+    const LEVEL_2 = [
+      [[1, 1, 0], [1, 0, 0], [1, 0, 0]],
+      [[1, 0, 0], [0, 0, 0], [0, 0, 0]],
+      [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+    ];
+
+    const LEVEL_3 = [
+      [[1, 1, 1], [1, 0, 0], [1, 0, 0]],
+      [[0, 1, 0], [1, 0, 0], [0, 0, 0]],
+      [[0, 1, 0], [0, 0, 0], [0, 0, 0]]
+    ];
+
+    // ----------------------------------------------------------------------
+    // 元件：CubeNet (立體展開圖 - 順暢版)
+    // ----------------------------------------------------------------------
+    const CubeNet = () => {
+      const [progress, setProgress] = useState(50);
+      const [shape, setShape] = useState('CUBE'); 
+
+      // 3D Math Logic
+      const ANGLE_X = 30 * (Math.PI / 180);
+      const ANGLE_Y = 45 * (Math.PI / 180);
+
+      const project = (p, offsetX, offsetY) => {
+        const isoX = (p.x - p.z) * Math.cos(ANGLE_X);
+        const isoY = -(p.y) + (p.x + p.z) * Math.sin(ANGLE_X);
+        return { x: isoX + offsetX, y: isoY + offsetY };
+      };
+
+      const rotateX = (p, angleRad) => {
+        const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
+        return { x: p.x, y: p.y * cos - p.z * sin, z: p.y * sin + p.z * cos };
+      };
+
+      const rotateZ = (p, angleRad) => {
+        const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
+        return { x: p.x * cos - p.y * sin, y: p.x * sin + p.y * cos, z: p.z };
+      };
+
+      const createRect = (w, d, y = 0) => [
+        { x: -w, y, z: -d }, { x: w, y, z: -d }, { x: w, y, z: d }, { x: -w, y, z: d },
+      ];
+
+      const faces = useMemo(() => {
+        const p = (100 - progress) / 100;
+        const rad90 = p * (Math.PI / 2);
+
+        if (shape === 'CUBE' || shape === 'CUBOID') {
+          const SX = shape === 'CUBE' ? 50 : 60;
+          const SY = shape === 'CUBE' ? 50 : 30;
+          const SZ = shape === 'CUBE' ? 50 : 40;
+
+          const bottomFace = { id: 'bottom', name: '底', color: 'rgba(239, 68, 68, 0.5)', borderColor: '#991B1B', vertices: createRect(SX, SZ, 0) };
+          
+          const rightVerts = [{ x: 0, y: 0, z: -SZ }, { x: 0, y: 0, z: SZ }, { x: 2 * SY, y: 0, z: SZ }, { x: 2 * SY, y: 0, z: -SZ }]
+            .map(pt => { const r = rotateZ(pt, rad90); return { x: r.x + SX, y: r.y, z: r.z }; });
+          const rightFace = { id: 'right', name: '右', color: 'rgba(245, 158, 11, 0.5)', borderColor: '#B45309', vertices: rightVerts };
+
+          const leftVerts = [{ x: 0, y: 0, z: -SZ }, { x: 0, y: 0, z: SZ }, { x: -2 * SY, y: 0, z: SZ }, { x: -2 * SY, y: 0, z: -SZ }]
+            .map(pt => { const r = rotateZ(pt, -rad90); return { x: r.x - SX, y: r.y, z: r.z }; });
+          const leftFace = { id: 'left', name: '左', color: 'rgba(16, 185, 129, 0.5)', borderColor: '#047857', vertices: leftVerts };
+
+          const frontVerts = [{ x: -SX, y: 0, z: 0 }, { x: SX, y: 0, z: 0 }, { x: SX, y: 0, z: 2 * SY }, { x: -SX, y: 0, z: 2 * SY }]
+            .map(pt => { const r = rotateX(pt, -rad90); return { x: r.x, y: r.y, z: r.z + SZ }; });
+          const frontFace = { id: 'front', name: '前', color: 'rgba(139, 92, 246, 0.5)', borderColor: '#6D28D9', vertices: frontVerts };
+
+          const backVerts = [{ x: -SX, y: 0, z: 0 }, { x: SX, y: 0, z: 0 }, { x: SX, y: 0, z: -2 * SY }, { x: -SX, y: 0, z: -2 * SY }]
+            .map(pt => { const r = rotateX(pt, rad90); return { x: r.x, y: r.y, z: r.z - SZ }; });
+          const backFace = { id: 'back', name: '後', color: 'rgba(59, 130, 246, 0.5)', borderColor: '#1D4ED8', vertices: backVerts };
+
+          const frontHingeY = 2 * SY * Math.sin(rad90);
+          const frontHingeZ = SZ + 2 * SY * Math.cos(rad90);
+          const topAngle = rad90 * 2;
+          const topVecY = 2 * SZ * Math.sin(topAngle);
+          const topVecZ = 2 * SZ * Math.cos(topAngle);
+          const topVerts = [{ x: -SX, y: 0, z: 0 }, { x: SX, y: 0, z: 0 }, { x: SX, y: topVecY, z: topVecZ }, { x: -SX, y: topVecY, z: topVecZ }]
+            .map(pt => ({ x: pt.x, y: pt.y + frontHingeY, z: pt.z + frontHingeZ }));
+          const topFace = { id: 'top', name: '上', color: 'rgba(236, 72, 153, 0.5)', borderColor: '#BE185D', vertices: topVerts };
+
+          return [bottomFace, rightFace, leftFace, frontFace, backFace, topFace];
+
+        } else if (shape === 'PYRAMID') {
+          const B = 50, H = 90;
+          const slantS = Math.sqrt(H*H + B*B);
+          const maxAngle = Math.PI - Math.atan2(H, B);
+          const currentAngle = p * maxAngle;
+          
+          const bottomFace = { id: 'bottom', name: '底', color: 'rgba(239, 68, 68, 0.5)', borderColor: '#991B1B', vertices: createRect(B, B, 0) };
+
+          const makeTri = (hingePos, axis, label, color, border) => {
+            let v1, v2, vTip, transformedVerts;
+            if (axis === 'X') { 
+              v1={x:0,y:0,z:-B}; v2={x:0,y:0,z:B}; vTip={x:slantS,y:0,z:0}; 
+              transformedVerts=[v1,v2,vTip].map(pt=>rotateZ(pt,currentAngle));
+            } else if (axis === 'X_NEG') { 
+              v1={x:0,y:0,z:-B}; v2={x:0,y:0,z:B}; vTip={x:-slantS,y:0,z:0}; 
+              transformedVerts=[v1,v2,vTip].map(pt=>rotateZ(pt,-currentAngle));
+            } else if (axis === 'Z') { 
+              v1={x:-B,y:0,z:0}; v2={x:B,y:0,z:0}; vTip={x:0,y:0,z:slantS}; 
+              transformedVerts=[v1,v2,vTip].map(pt=>rotateX(pt,-currentAngle));
+            } else { 
+              v1={x:-B,y:0,z:0}; v2={x:B,y:0,z:0}; vTip={x:0,y:0,z:-slantS}; 
+              transformedVerts=[v1,v2,vTip].map(pt=>rotateX(pt,currentAngle));
+            }
+            return { id: label, name: label, color, borderColor: border, vertices: transformedVerts.map(pt => ({ x: pt.x + hingePos.x, y: pt.y + hingePos.y, z: pt.z + hingePos.z })) };
+          };
+
+          return [bottomFace, makeTri({x:B,y:0,z:0},'X','右','rgba(245, 158, 11, 0.5)','#B45309'), makeTri({x:-B,y:0,z:0},'X_NEG','左','rgba(16, 185, 129, 0.5)','#047857'), makeTri({x:0,y:0,z:B},'Z','前','rgba(139, 92, 246, 0.5)','#6D28D9'), makeTri({x:0,y:0,z:-B},'Z_NEG','後','rgba(59, 130, 246, 0.5)','#1D4ED8')];
+
+        } else if (shape === 'TRAPEZOID') {
+          const B_W = 60, T_W = 30, H = 50, D = 40;
+          const slantW = Math.sqrt(Math.pow(B_W - T_W, 2) + Math.pow(H, 2));
+          const targetSideTilt = Math.acos((B_W - T_W) / slantW);
+          const sideAngle = p * (Math.PI - targetSideTilt);
+
+          const bottomFace = { id: 'bottom', name: '底', color: 'rgba(239, 68, 68, 0.5)', borderColor: '#991B1B', vertices: createRect(B_W, D, 0) };
+          const frontVerts = [{x:-B_W,y:0,z:0}, {x:B_W,y:0,z:0}, {x:T_W,y:0,z:H}, {x:-T_W,y:0,z:H}].map(pt => { const r=rotateX(pt,-rad90); return {x:r.x,y:r.y,z:r.z+D}; });
+          const frontFace = { id: 'front', name: '前', color: 'rgba(139, 92, 246, 0.5)', borderColor: '#6D28D9', vertices: frontVerts };
+          const backVerts = [{x:-B_W,y:0,z:0}, {x:B_W,y:0,z:0}, {x:T_W,y:0,z:-H}, {x:-T_W,y:0,z:-H}].map(pt => { const r=rotateX(pt,rad90); return {x:r.x,y:r.y,z:r.z-D}; });
+          const backFace = { id: 'back', name: '後', color: 'rgba(59, 130, 246, 0.5)', borderColor: '#1D4ED8', vertices: backVerts };
+          const rightVerts = [{x:0,y:0,z:-D}, {x:0,y:0,z:D}, {x:slantW,y:0,z:D}, {x:slantW,y:0,z:-D}].map(pt => { const r=rotateZ(pt,sideAngle); return {x:r.x+B_W,y:r.y,z:r.z}; });
+          const rightFace = { id: 'right', name: '右', color: 'rgba(245, 158, 11, 0.5)', borderColor: '#B45309', vertices: rightVerts };
+          const leftVerts = [{x:0,y:0,z:-D}, {x:0,y:0,z:D}, {x:-slantW,y:0,z:D}, {x:-slantW,y:0,z:-D}].map(pt => { const r=rotateZ(pt,-sideAngle); return {x:r.x-B_W,y:r.y,z:r.z}; });
+          const leftFace = { id: 'left', name: '左', color: 'rgba(16, 185, 129, 0.5)', borderColor: '#047857', vertices: leftVerts };
+          const frontHingeY = H * Math.sin(rad90), frontHingeZ = D + H * Math.cos(rad90);
+          const topAngle = rad90 * 2, topVecY = 2 * D * Math.sin(topAngle), topVecZ = 2 * D * Math.cos(topAngle);
+          const topVerts = [{x:-T_W,y:0,z:0}, {x:T_W,y:0,z:0}, {x:T_W,y:topVecY,z:topVecZ}, {x:-T_W,y:topVecY,z:topVecZ}].map(pt => ({x:pt.x,y:pt.y+frontHingeY,z:pt.z+frontHingeZ}));
+          const topFace = { id: 'top', name: '上', color: 'rgba(236, 72, 153, 0.5)', borderColor: '#BE185D', vertices: topVerts };
+
+          return [bottomFace, rightFace, leftFace, frontFace, backFace, topFace];
+        }
+        return [];
+      }, [progress, shape]);
+
+      const CX = 200, CY = 250;
+      const sortedFaces = useMemo(() => {
+        return faces.map(face => {
+          const cx = face.vertices.reduce((s,v)=>s+v.x,0)/face.vertices.length;
+          const cy = face.vertices.reduce((s,v)=>s+v.y,0)/face.vertices.length;
+          const cz = face.vertices.reduce((s,v)=>s+v.z,0)/face.vertices.length;
+          const p = project({x:cx,y:cy,z:cz}, 0, 0);
+          return {...face, score: p.y, centroid: {x:cx,y:cy,z:cz}};
+        }).sort((a,b)=>a.score - b.score);
+      }, [faces]);
+
+      return (
+        <div className="flex flex-col items-center justify-center w-full min-h-[500px] p-4">
+          <div className="mb-4 text-center z-10 w-full">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">2.5D 展開圖實驗室</h2>
+            <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-xl mx-auto">
+              {['CUBE', 'CUBOID', 'TRAPEZOID', 'PYRAMID'].map(s => (
+                <button key={s} onClick={() => { setShape(s); setProgress(50); }} className={`px-3 py-1.5 rounded-full text-sm font-bold transition-all ${shape === s ? 'bg-primary text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100'}`}>
+                  {s === 'CUBE' ? '正方體' : s === 'CUBOID' ? '長方體' : s === 'TRAPEZOID' ? '梯形柱' : '四角錐'}
+                </button>
+              ))}
+            </div>
+            <p className="text-gray-500 text-sm h-5">
+              {shape === 'CUBE' && '正方體由 6 個相同的正方形組成。'}
+              {shape === 'CUBOID' && '長方體由 3 組對應的長方形組成。'}
+              {shape === 'PYRAMID' && '四角錐有一個正方形底面和 4 個三角形側面。'}
+              {shape === 'TRAPEZOID' && '梯形柱由兩個梯形底面和四個長方形側面組成。'}
+            </p>
+          </div>
+
+          <div className="relative bg-white rounded-3xl shadow-inner border border-gray-100 p-4 transition-all">
+            <svg width="400" height="400" viewBox="0 0 400 450" className="overflow-visible">
+              <g transform={`translate(${CX}, ${CY + 100}) scale(1, 0.5)`} opacity="0.1">
+                <circle cx="0" cy="0" r="180" fill="none" stroke="currentColor" strokeWidth="2" />
+                <path d="M-200 0 L200 0 M0 -200 L0 200" stroke="currentColor" strokeWidth="2" />
+              </g>
+              {sortedFaces.map(face => {
+                const points2D = face.vertices.map(v => project(v, CX, CY));
+                const pathStr = points2D.map((p, i) => `${i===0?'M':'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') + ' Z';
+                const centroid2D = project(face.centroid || {x:0,y:0,z:0}, CX, CY);
+                return (
+                  <g key={face.id}>
+                    {/* 關鍵修改：移除 stroke 的 transition 以避免拖拉卡頓 */}
+                    <path d={pathStr} fill={face.color} stroke={face.borderColor} strokeWidth="2" strokeLinejoin="round" 
+                          className="hover:opacity-80 cursor-pointer" />
+                    {points2D.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="white" stroke={face.borderColor} strokeWidth="1" />)}
+                    <text x={centroid2D.x} y={centroid2D.y} dy="0.35em" textAnchor="middle" fill="white" fontWeight="bold" fontSize="14" style={{textShadow: '0px 1px 2px rgba(0,0,0,0.5)'}} pointerEvents="none">{face.name}</text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+
+          <div className="mt-8 w-full max-w-md bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+            <label className="flex justify-between text-sm font-bold text-gray-700 mb-4">
+              <span className="flex items-center gap-2"><span className="text-xl">🧊</span> 立體</span>
+              <span className="text-primary bg-indigo-50 px-3 py-1 rounded-full">{progress}%</span>
+              <span className="flex items-center gap-2">展開 <span className="text-xl">✝️</span></span>
+            </label>
+            <input type="range" min="0" max="100" value={progress} onChange={(e) => setProgress(Number(e.target.value))} className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary hover:accent-indigo-500 transition-all"/>
+          </div>
+        </div>
+      );
+    };
+
+    // ----------------------------------------------------------------------
+    // 元件：ThreeViewDrill (三視圖實驗室)
+    // ----------------------------------------------------------------------
+    const Grid2DView = ({ data, title, color, userAnswer, isInteractive, onToggle }) => (
+      <div className="flex flex-col items-center mx-2">
+        <h4 className="text-sm font-bold mb-2 text-gray-700">{title}</h4>
+        <div className={`grid grid-cols-3 gap-1 bg-gray-200 p-1 rounded ${isInteractive ? 'ring-2 ring-indigo-200' : ''}`}>
+          {data.map((row, rIndex) => row.map((cell, cIndex) => {
+            const isActive = userAnswer ? userAnswer[rIndex][cIndex] === 1 : cell === 1;
+            const isCorrect = userAnswer ? (userAnswer[rIndex][cIndex] === data[rIndex][cIndex]) : true;
+            let bgClass = isActive ? (userAnswer && !isCorrect ? 'bg-red-400' : color) : 'bg-white';
+            const hoverClass = isInteractive ? 'hover:bg-gray-100 active:bg-gray-200' : '';
+            return <div key={`${rIndex}-${cIndex}`} onClick={() => onToggle && onToggle(rIndex, cIndex)} className={`w-8 h-8 rounded-sm shadow-sm flex items-center justify-center cursor-pointer transition-all duration-150 ${bgClass} ${hoverClass}`}>{isInteractive && !isActive && <div className="w-1 h-1 bg-gray-300 rounded-full" />}</div>;
+          }))}
+        </div>
+      </div>
+    );
+
+    const ThreeViewDrill = () => {
+      const [level, setLevel] = useState(1);
+      const [currentGrid, setCurrentGrid] = useState(LEVEL_1);
+      const [builderGrid, setBuilderGrid] = useState([[[0,0,0],[0,0,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]]]);
+      const [mode, setMode] = useState('view');
+      const createEmptyGrid = () => [[0,0,0],[0,0,0],[0,0,0]];
+      const [userTop, setUserTop] = useState(createEmptyGrid());
+      const [userFront, setUserFront] = useState(createEmptyGrid());
+      const [userRight, setUserRight] = useState(createEmptyGrid());
+      const [checkResult, setCheckResult] = useState(null);
+
+      useEffect(() => { setBuilderGrid(JSON.parse(JSON.stringify(LEVEL_1))); }, []);
+      useEffect(() => {
+        if (level === 1) setCurrentGrid(LEVEL_1);
+        if (level === 2) setCurrentGrid(LEVEL_2);
+        if (level === 3) setCurrentGrid(LEVEL_3);
+        setUserTop(createEmptyGrid()); setUserFront(createEmptyGrid()); setUserRight(createEmptyGrid()); setCheckResult(null);
+      }, [level]);
+
+      const getTopView = (grid) => {
+        const view = createEmptyGrid();
+        for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) for (let z = 0; z < 3; z++) if (grid[z][y][x] === 1) view[y][x] = 1;
+        return view;
+      };
+      const getFrontView = (grid) => {
+        const view = createEmptyGrid();
+        for (let z = 0; z < 3; z++) for (let x = 0; x < 3; x++) for (let y = 0; y < 3; y++) if (grid[z][y][x] === 1) view[2 - z][x] = 1;
+        return view;
+      };
+      const getRightView = (grid) => {
+        const view = createEmptyGrid();
+        for (let z = 0; z < 3; z++) for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (grid[z][y][x] === 1) view[2 - z][y] = 1;
+        return view;
+      };
+
+      const activeGrid = mode === 'builder' ? builderGrid : currentGrid;
+      const checkAnswer = () => {
+        const correctTop = getTopView(currentGrid); const correctFront = getFrontView(currentGrid); const correctRight = getRightView(currentGrid);
+        if (JSON.stringify(userTop) === JSON.stringify(correctTop) && JSON.stringify(userFront) === JSON.stringify(correctFront) && JSON.stringify(userRight) === JSON.stringify(correctRight)) setCheckResult("太棒了！全部答對！🎉");
+        else setCheckResult("再試試看喔！有些地方不一樣。加油！💪");
+      };
+      const toggleGrid = (grid, setGrid, r, c) => { const newG = [...grid.map(row => [...row])]; newG[r][c] = newG[r][c] === 1 ? 0 : 1; setGrid(newG); };
+      const handleBuilderClick = (view, r, c) => {
+         const newGrid = JSON.parse(JSON.stringify(builderGrid));
+         if(view==='top') { const hasBlock = [0,1,2].some(z=>newGrid[z][r][c]===1); for(let z=0;z<3;z++) newGrid[z][r][c]=hasBlock?0:0; if(!hasBlock) newGrid[0][r][c]=1; }
+         else if(view==='front') { const z=2-r; const hasBlock=[0,1,2].some(y=>newGrid[z][y][c]===1); for(let y=0;y<3;y++) newGrid[z][y][c]=hasBlock?0:0; if(!hasBlock) newGrid[z][2][c]=1; }
+         else if(view==='right') { const z=2-r; const hasBlock=[0,1,2].some(x=>newGrid[z][c][x]===1); for(let x=0;x<3;x++) newGrid[z][c][x]=hasBlock?0:0; if(!hasBlock) newGrid[z][c][2]=1; }
+         setBuilderGrid(newGrid);
+      };
+
+      return (
+        <div className="flex flex-col items-center w-full max-w-5xl mx-auto p-4">
+          <div className="flex flex-col md:flex-row justify-between items-center w-full mb-6 gap-4">
+            <div>
+               <h2 className="text-2xl font-bold text-gray-800">積木三視圖實驗室</h2>
+               <p className="text-sm text-gray-500 mt-1">目前模式：{mode === 'view' ? '觀察模式' : mode === 'quiz' ? '測驗模式' : '自由創作'}</p>
+            </div>
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+              {['view','quiz','builder'].map(m => (
+                <button key={m} onClick={() => { setMode(m); setCheckResult(null); }} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === m ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+                  {m==='view'?'觀察':m==='quiz'?'測驗':'創作'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {mode !== 'builder' && <div className="flex gap-2 mb-6">{[1,2,3].map(l=><button key={l} onClick={()=>setLevel(l)} className={`px-4 py-1.5 rounded-full text-sm font-medium ${level===l?'bg-primary text-white':'bg-gray-200'}`}>Level {l}</button>)}</div>}
+          <div className="flex flex-col lg:flex-row w-full gap-8">
+            <div className="flex-1 bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center justify-center min-h-[400px]">
+               <div className="flex justify-between w-full mb-4 items-center">
+                 <h3 className="text-lg font-bold text-gray-500">立體積木模型</h3>
+                 {mode === 'builder' && <button onClick={()=>setBuilderGrid([[[0,0,0],[0,0,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]]])} className="text-xs text-red-500 hover:underline">清空積木</button>}
+               </div>
+               <div className="relative w-64 h-64" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(-30deg) rotateY(45deg)' }}>
+                  {activeGrid.map((layer, z) => layer.map((row, y) => row.map((val, x) => {
+                    if (val === 0) return null;
+                    const size = 40, tx = (x - 1) * size, ty = (y - 1) * size, tz = (z) * size;
+                    return (
+                      <div key={`${z}-${y}-${x}`} className="absolute w-10 h-10 transition-transform duration-300 ease-out" style={{transformStyle: 'preserve-3d', transform: `translateX(${tx}px) translateZ(${ty}px) translateY(${-tz}px)`}}>
+                         <div className="absolute w-full h-full bg-blue-500 border border-blue-700 opacity-90" style={{transform: 'rotateY(0deg) translateZ(20px)'}} />
+                         <div className="absolute w-full h-full bg-blue-600 border border-blue-700 opacity-90" style={{transform: 'rotateY(180deg) translateZ(20px)'}} />
+                         <div className="absolute w-full h-full bg-blue-400 border border-blue-700 opacity-90" style={{transform: 'rotateY(90deg) translateZ(20px)'}} />
+                         <div className="absolute w-full h-full bg-blue-400 border border-blue-700 opacity-90" style={{transform: 'rotateY(-90deg) translateZ(20px)'}} />
+                         <div className="absolute w-full h-full bg-blue-300 border border-blue-700 opacity-90" style={{transform: 'rotateX(90deg) translateZ(20px)'}} />
+                         <div className="absolute w-full h-full bg-blue-700 border border-blue-700 opacity-90" style={{transform: 'rotateX(-90deg) translateZ(20px)'}} />
+                      </div>
+                    )
+                  })))}
+                  <div className="absolute w-48 h-48 bg-gray-100 border-2 border-dashed border-gray-300 transform -translate-x-1/2 -translate-y-1/2" style={{ left: '50%', top: '50%', transform: 'rotateX(90deg) translateZ(-25px)' }}></div>
+               </div>
+               <p className="mt-8 text-sm text-gray-400 text-center">前視圖方向 ↙ | 右視圖方向 ↘</p>
+            </div>
+            <div className="flex-1 flex flex-col items-center">
+               <div className="bg-white rounded-2xl shadow-lg p-6 w-full">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4">{mode === 'view' ? '觀察三視圖' : mode === 'quiz' ? '隨堂測驗' : '創作模式'}</h3>
+                  <div className="flex justify-center gap-8 mb-6 flex-wrap">
+                     <Grid2DView title="上視圖 (Top)" data={mode!=='quiz'?getTopView(activeGrid):userTop} color="bg-green-400" userAnswer={mode==='quiz'?userTop:undefined} isInteractive={mode!=='view'} onToggle={mode==='quiz'?(r,c)=>toggleGrid(userTop,setUserTop,r,c):mode==='builder'?(r,c)=>handleBuilderClick('top',r,c):undefined} />
+                     <Grid2DView title="前視圖 (Front)" data={mode!=='quiz'?getFrontView(activeGrid):userFront} color="bg-purple-400" userAnswer={mode==='quiz'?userFront:undefined} isInteractive={mode!=='view'} onToggle={mode==='quiz'?(r,c)=>toggleGrid(userFront,setUserFront,r,c):mode==='builder'?(r,c)=>handleBuilderClick('front',r,c):undefined} />
+                     <Grid2DView title="右視圖 (Right)" data={mode!=='quiz'?getRightView(activeGrid):userRight} color="bg-yellow-400" userAnswer={mode==='quiz'?userRight:undefined} isInteractive={mode!=='view'} onToggle={mode==='quiz'?(r,c)=>toggleGrid(userRight,setUserRight,r,c):mode==='builder'?(r,c)=>handleBuilderClick('right',r,c):undefined} />
+                  </div>
+                  {mode === 'quiz' && (
+                    <div className="text-center">
+                      <button onClick={checkAnswer} className="bg-primary hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full shadow-md transition transform hover:scale-105">檢查答案</button>
+                      {checkResult && <div className={`mt-4 p-3 rounded-lg text-lg font-bold ${checkResult.includes('棒') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{checkResult}</div>}
+                    </div>
+                  )}
+               </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ----------------------------------------------------------------------
+    // 元件：App (主程式 - 已移除 AI 小博士)
+    // ----------------------------------------------------------------------
+    const App = () => {
+      const [currentMode, setCurrentMode] = useState('NETS');
+      const navItems = [
+        { id: 'NETS', label: '展開圖大挑戰', icon: '📦' },
+        { id: 'THREE_VIEW', label: '三視圖實驗室', icon: '👀' },
+      ];
+
+      return (
+        <div className="min-h-screen flex flex-col font-sans">
+          <header className="bg-white shadow-sm z-50 sticky top-0">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-3xl">📐</span>
+                <h1 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">幾何小探險</h1>
+              </div>
+              <nav className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+                {navItems.map((item) => (
+                  <button key={item.id} onClick={() => setCurrentMode(item.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${currentMode === item.id ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <span>{item.icon}</span><span className="hidden md:inline">{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </header>
+          <main className="flex-1 overflow-hidden relative w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+            <div className="absolute inset-0 bg-white/50 pointer-events-none"></div>
+            <div className="relative z-10 max-w-6xl mx-auto px-4 py-8 h-full flex flex-col justify-center">
+              {currentMode === 'NETS' && <div className="animate-fade-in-up"><CubeNet /></div>}
+              {currentMode === 'THREE_VIEW' && <div className="animate-fade-in-up"><ThreeViewDrill /></div>}
+            </div>
+          </main>
+          <footer className="bg-white border-t border-gray-200 py-4">
+            <div className="max-w-6xl mx-auto px-4 text-center text-gray-400 text-sm"></div>
+          </footer>
+        </div>
+      );
+    };
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

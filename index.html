@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數學素養實驗室 | 歡迎</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'edu-blue': '#1A365D',   /* 教師版的專業深藍 */
+                        'stu-yellow': '#F59E0B', /* 學生版的活潑亮黃 */
+                        'edu-bg': '#F3F4F6'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-edu-bg h-screen flex flex-col items-center justify-center font-sans">
+
+    <div class="max-w-4xl w-full px-6 text-center">
+        
+        <div class="mb-16">
+            <div class="text-6xl mb-6 flex justify-center gap-4">
+                <span>📐</span>
+                <span>💡</span>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold text-edu-blue mb-4 tracking-wide">歡迎來到 數學素養實驗室</h1>
+            <p class="text-xl text-gray-500">請選擇您的身分，進入專屬的互動學習空間</p>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-8 justify-center">
+            
+            <a href="teacherport/teachergeometry.html" class="group flex-1 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-10 border-t-8 border-edu-blue hover:-translate-y-2 cursor-pointer text-left no-underline">
+                <div class="text-6xl mb-6">🧑‍🏫</div>
+                <h2 class="text-3xl font-bold text-edu-blue mb-3 group-hover:text-blue-700 transition-colors">我是教育者</h2>
+                <p class="text-gray-500 mb-8 leading-relaxed">
+                    進入教師資源中心。探索涵蓋各年級的互動數學教具，輔助思考教學，並提供完整的題庫設計與課綱指引。
+                </p>
+                <div class="text-edu-blue font-bold flex items-center gap-2 text-lg">
+                    進入教師版 <span class="group-hover:translate-x-2 transition-transform">→</span>
+                </div>
+            </a>
+
+            <a href="student.html" class="group flex-1 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-10 border-t-8 border-stu-yellow hover:-translate-y-2 cursor-pointer text-left no-underline">
+                <div class="text-6xl mb-6">🚀</div>
+                <h2 class="text-3xl font-bold text-stu-yellow mb-3 group-hover:text-orange-500 transition-colors">我是小學生</h2>
+                <p class="text-gray-500 mb-8 leading-relaxed">
+                    進入數學大冒險！這裡沒有枯燥的考卷，只有好玩的互動遊戲與闖關挑戰，陪你一起動手玩數學。
+                </p>
+                <div class="text-stu-yellow font-bold flex items-center gap-2 text-lg">
+                    進入遊戲版 <span class="group-hover:translate-x-2 transition-transform">→</span>
+                </div>
+            </a>
+
+        </div>
+    </div>
+
+</body>
+</html>

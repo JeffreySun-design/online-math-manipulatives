@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>注水實驗室 (Volume Lab)</title>
+    <!-- React & ReactDOM -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX compilation in browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif; touch-action: none; }
+        #root { width: 100vw; height: 100vh; }
+        
+        /* Animations */
+        @keyframes surface-bob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useCallback, useMemo, memo, forwardRef } = React;
+        const { createRoot } = ReactDOM;
+
+        // --- CONFIG ---
+        const CONFIG = {
+            flowRate: 0.8,
+            spoutOffset: { x: 5, y: 20 },
+        };
+
+        const TARGETS_CONFIG = [
+            { id: 'target-cup', type: 'cup', label: '標準杯', riseFactor: 0.8, maxVolume: 100, width: 130, height: 160 },
+            { id: 'target-cylinder', type: 'cylinder', label: '瘦高瓶', riseFactor: 1.5, maxVolume: 100, width: 80, height: 200 },
+            { id: 'target-bowl', type: 'bowl', label: '寬扁盆', riseFactor: 0.4, maxVolume: 100, width: 200, height: 110 },
+            { id: 'target-beaker', type: 'beaker', label: '燒杯', riseFactor: 0.9, maxVolume: 100, width: 140, height: 160 },
+            { id: 'target-wine', type: 'wine-glass', label: '高腳杯', riseFactor: 1.2, maxVolume: 100, width: 100, height: 180 },
+            { id: 'target-cocktail', type: 'cocktail-glass', label: '酒杯', riseFactor: 1.8, maxVolume: 100, width: 140, height: 160 },
+        ];
+
+        // --- COMPONENT: Stream ---
+        const Stream = ({ start, endY, width }) => {
+            const path = `
+                M ${start.x} ${start.y}
+                L ${start.x - width/2} ${endY}
+                L ${start.x + width/2} ${endY}
+                L ${start.x} ${start.y}
+                Z
+            `;
+            return (
+                <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 500 }}>
+                    <path d={path} fill="#3b82f6" opacity={0.7} />
+                </svg>
+            );
+        };
+
+        // --- COMPONENT: Pitcher ---
+        const Pitcher = forwardRef(({ isPouring, onPointerDown }, ref) => {
+            return (
+                <div
+                    ref={ref}
+                    onPointerDown={onPointerDown}
+                    style={{
+                        position: 'absolute',
+                        width: 160,
+                        height: 140,
+                        cursor: isPouring ? 'grabbing' : 'grab',
+                        zIndex: 9999,
+                        touchAction: 'none',
+                        pointerEvents: 'auto',
+                    }}
+                >
+                    <div
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            transformOrigin: '5px 20px',
+                            transform: isPouring ? 'rotate(-45deg)' : 'rotate(0deg)',
+                            transition: isPouring ? 'transform 0.15s cubic-bezier(0.25, 1, 0.5, 1)' : 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)',
+                            filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))',
+                        }}
+                    >
+                        <svg viewBox="0 0 160 140" width="100%" height="100%" style={{ overflow: 'visible' }}>
+                            <defs>
+                                <clipPath id="clip-liquid">
+                                    <path d="M5,20 L115,20 L110,135 L20,135 Z" />
+                                </clipPath>
+                            </defs>
+                            <path d="M115,30 C155,30 155,110 115,120" fill="none" stroke="#94a3b8" strokeWidth="8" strokeLinecap="round" />
+                            <g clipPath="url(#clip-liquid)">
+                                <rect 
+                                    x="-50" y="40" width="250" height="150" 
+                                    fill="rgba(59, 130, 246, 0.6)"
+                                    style={{
+                                        transformOrigin: '80px 70px',
+                                        transform: isPouring ? 'rotate(45deg)' : 'rotate(0deg)',
+                                        transition: 'transform 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+                                    }}
+                                />
+                            </g>
+                            <path d="M5,20 L115,20 L110,135 L20,135 Z" fill="rgba(255,255,255,0.2)" stroke="#94a3b8" strokeWidth="3" strokeLinejoin="round" />
+                            <path d="M5,20 Q15,35 25,20" fill="white" opacity="0.5" />
+                        </svg>
+                    </div>
+                </div>
+            );
+        });
+
+        // --- COMPONENT: Target ---
+        const Target = memo(({ config, volume, showScale }) => {
+            const shapeStyles = {
+                cup: { width: 130, height: 160, borderRadius: '0 0 15px 15px' },
+                cylinder: { width: 80, height: 200, borderRadius: '0 0 10px 10px' },
+                bowl: { width: 200, height: 110, borderRadius: '0 0 50px 50px' },
+                beaker: { width: 140, height: 160, borderRadius: '0 0 5px 5px' },
+            };
+
+            const isSvg = ['wine-glass', 'cocktail-glass'].includes(config.type);
+
+            const renderTicks = () => {
+                if (!showScale) return null;
+                const ticks = [];
+                ticks.push(
+                    <div 
+                        key="spine"
+                        style={{
+                            position: 'absolute',
+                            right: '15%',
+                            top: '0%', 
+                            bottom: '0%',
+                            width: '1px',
+                            backgroundColor: 'rgba(51, 65, 85, 0.2)',
+                            zIndex: 10,
+                        }}
+                    />
+                );
+
+                for (let i = 1; i <= 10; i++) {
+                    const isTop = i === 10;
+                    const isMiddle = i === 5;
+                    const width = isTop ? '35%' : isMiddle ? '25%' : '15%';
+                    
+                    ticks.push(
+                        <div
+                            key={i}
+                            style={{
+                                position: 'absolute',
+                                bottom: `${i * 10}%`,
+                                right: '15%',
+                                width: width,
+                                height: isTop ? '3px' : '1px',
+                                backgroundColor: isTop ? '#ef4444' : (isMiddle ? '#334155' : '#64748b'),
+                                zIndex: 10,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'flex-start',
+                            }}
+                        >
+                            {(isTop || isMiddle) && (
+                                <div style={{
+                                    position: 'absolute',
+                                    right: '110%',
+                                    transform: 'translateY(1px)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                    backdropFilter: 'blur(4px)',
+                                    padding: '2px 8px',
+                                    borderRadius: '6px',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                    whiteSpace: 'nowrap',
+                                    pointerEvents: 'none',
+                                }}>
+                                    <span style={{ 
+                                        fontSize: isTop ? 14 : 11, 
+                                        fontWeight: 'bold', 
+                                        color: isTop ? '#b91c1c' : '#475569',
+                                        letterSpacing: '0.5px'
+                                    }}>
+                                        {isTop ? '1公升' : '5分公升'}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    );
+                }
+                return ticks;
+            };
+
+            if (isSvg) {
+                const isWine = config.type === 'wine-glass';
+                const totalH = config.height;
+                const bowlH = isWine ? 110 : 90;
+                const stemH = totalH - bowlH;
+                const liquidH = (volume / 100) * bowlH;
+                const liquidY = totalH - stemH - liquidH; 
+                const baseY = totalH - 5; 
+
+                return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', flexShrink: 0 }}>
+                        <div id={config.id} style={{ width: config.width, height: config.height, position: 'relative', filter: 'drop-shadow(0 8px 8px rgba(0,0,0,0.08))' }}>
+                            <svg width="100%" height="100%" viewBox={`0 0 ${config.width} ${config.height}`} style={{ overflow: 'visible' }}>
+                                <defs>
+                                    <clipPath id={`clip-${config.id}`}>
+                                        {isWine ? (
+                                            <path d={`M 10,5 Q 10,${bowlH} ${config.width/2},${bowlH} Q ${config.width-10},${bowlH} ${config.width-10},5 H 10 Z`} />
+                                        ) : (
+                                            <path d={`M 5,5 L ${config.width/2},${bowlH} L ${config.width-5},5 Z`} />
+                                        )}
+                                    </clipPath>
+                                </defs>
+                                <path 
+                                    d={`M ${config.width/2},${bowlH} L ${config.width/2},${baseY} M ${config.width/2-30},${baseY} H ${config.width/2+30}`} 
+                                    stroke="#cbd5e1" strokeWidth="6" fill="none" 
+                                />
+                                <rect x={config.width/2-30} y={baseY - 2.5} width="60" height="5" rx="2" fill="#cbd5e1" />
+                                <g clipPath={`url(#clip-${config.id})`}>
+                                    <rect x="0" y="0" width={config.width} height={totalH} fill="rgba(255,255,255,0.4)" />
+                                </g>
+                                <g clipPath={`url(#clip-${config.id})`}>
+                                    <rect 
+                                        x="0" 
+                                        y={liquidY} 
+                                        width={config.width} 
+                                        height={liquidH + 10}
+                                        fill="#3b82f6" 
+                                        fillOpacity="0.8"
+                                    />
+                                    <rect 
+                                        x="0" y={liquidY} width={config.width} height="3" 
+                                        fill="rgba(255,255,255,0.4)" 
+                                    />
+                                </g>
+                                <g clipPath={`url(#clip-${config.id})`}>
+                                    <rect x="0" y="0" width={config.width} height={totalH} fill="none" stroke="#cbd5e1" strokeWidth="4" />
+                                </g>
+                            </svg>
+                            <div style={{ position: 'absolute', top: 0, height: bowlH, width: '100%', pointerEvents: 'none' }}>
+                                {renderTicks()}
+                            </div>
+                        </div>
+                        <div style={{ marginTop: 15, fontWeight: 'bold', color: '#64748b', fontSize: '1.1rem', height: '24px' }}>
+                            {config.label}
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', flexShrink: 0 }}>
+                    {shapeStyles[config.type] && (
+                        <div
+                            id={config.id}
+                            style={{
+                                ...shapeStyles[config.type],
+                                position: 'relative',
+                                background: 'rgba(255,255,255,0.5)',
+                                border: '4px solid #cbd5e1',
+                                borderTop: 'none',
+                                overflow: 'hidden',
+                                boxShadow: '0 8px 12px rgba(0,0,0,0.08)',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    bottom: 0, left: 0, width: '100%',
+                                    height: `${volume}%`,
+                                    backgroundColor: '#3b82f6',
+                                    opacity: 0.85,
+                                }}
+                            >
+                                <div style={{ 
+                                    width: '100%', height: '4px', background: 'rgba(255,255,255,0.4)', position: 'absolute', top: 0,
+                                    animation: 'surface-bob 2s infinite ease-in-out'
+                                }} />
+                            </div>
+                            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                                {renderTicks()}
+                            </div>
+                        </div>
+                    )}
+                    <div style={{ marginTop: 15, fontWeight: 'bold', color: '#64748b', fontSize: '1.1rem', height: '24px' }}>
+                        {config.label}
+                    </div>
+                </div>
+            );
+        });
+
+        // --- COMPONENT: App ---
+        const App = () => {
+            const pitcherRef = useRef(null);
+            const containerRef = useRef(null);
+            const pitcherPosRef = useRef({ x: window.innerWidth / 2 - 80, y: 100 });
+            const dragOffsetRef = useRef({ x: 0, y: 0 });
+            const requestRef = useRef(0);
+            const isDraggingRef = useRef(false);
+
+            const [volumes, setVolumes] = useState({
+                'target-cup': 0, 'target-cylinder': 0, 'target-bowl': 0,
+                'target-beaker': 0, 'target-wine': 0, 'target-cocktail': 0,
+            });
+            const [pouringTargetId, setPouringTargetId] = useState(null);
+            const [showScale, setShowScale] = useState(false);
+
+            const updatePitcherDOM = (x, y) => {
+                if (pitcherRef.current) {
+                    pitcherRef.current.style.transform = `translate(${x}px, ${y}px)`;
+                }
+            };
+
+            const handlePointerDown = (e) => {
+                e.preventDefault();
+                isDraggingRef.current = true;
+                dragOffsetRef.current = {
+                    x: e.clientX - pitcherPosRef.current.x,
+                    y: e.clientY - pitcherPosRef.current.y
+                };
+                if (pitcherRef.current) {
+                    pitcherRef.current.style.cursor = 'grabbing';
+                }
+                e.target.setPointerCapture(e.pointerId);
+            };
+
+            const handlePointerMove = useCallback((e) => {
+                if (!isDraggingRef.current) return;
+                const newX = e.clientX - dragOffsetRef.current.x;
+                const newY = e.clientY - dragOffsetRef.current.y;
+                pitcherPosRef.current = { x: newX, y: newY };
+                updatePitcherDOM(newX, newY);
+            }, []);
+
+            const handlePointerUp = useCallback(() => {
+                isDraggingRef.current = false;
+                setPouringTargetId(null);
+                if (pitcherRef.current) {
+                    pitcherRef.current.style.cursor = 'grab';
+                }
+            }, []);
+
+            useEffect(() => {
+                window.addEventListener('pointermove', handlePointerMove);
+                window.addEventListener('pointerup', handlePointerUp);
+                updatePitcherDOM(pitcherPosRef.current.x, pitcherPosRef.current.y);
+                return () => {
+                    window.removeEventListener('pointermove', handlePointerMove);
+                    window.removeEventListener('pointerup', handlePointerUp);
+                };
+            }, [handlePointerMove, handlePointerUp]);
+
+            const animate = useCallback(() => {
+                if (isDraggingRef.current) {
+                    const pos = pitcherPosRef.current;
+                    const spoutWorld = {
+                        x: pos.x + CONFIG.spoutOffset.x,
+                        y: pos.y + CONFIG.spoutOffset.y
+                    };
+
+                    let foundTargetId = null;
+                    TARGETS_CONFIG.forEach(target => {
+                        const el = document.getElementById(target.id);
+                        if (el) {
+                            const rect = el.getBoundingClientRect();
+                            const bufferX = 20;
+                            const sensorTop = rect.top - 100;
+                            const sensorBottom = rect.top + 50;
+                            if (spoutWorld.x >= (rect.left - bufferX) && spoutWorld.x <= (rect.right + bufferX) &&
+                                spoutWorld.y >= sensorTop && spoutWorld.y <= sensorBottom) {
+                                foundTargetId = target.id;
+                            }
+                        }
+                    });
+
+                    setPouringTargetId(prev => (prev !== foundTargetId ? foundTargetId : prev));
+
+                    if (foundTargetId) {
+                        setVolumes(prev => {
+                            const currentVol = prev[foundTargetId];
+                            const targetConfig = TARGETS_CONFIG.find(t => t.id === foundTargetId);
+                            if (targetConfig && currentVol < 100) {
+                                const newVol = Math.min(100, currentVol + (CONFIG.flowRate * targetConfig.riseFactor));
+                                return { ...prev, [foundTargetId]: newVol };
+                            }
+                            return prev;
+                        });
+                    }
+                }
+                requestRef.current = requestAnimationFrame(animate);
+            }, []);
+
+            useEffect(() => {
+                requestRef.current = requestAnimationFrame(animate);
+                return () => cancelAnimationFrame(requestRef.current);
+            }, [animate]);
+
+            const getStreamData = () => {
+                if (!pouringTargetId) return null;
+                const targetEl = document.getElementById(pouringTargetId);
+                if (!targetEl) return null;
+                const rect = targetEl.getBoundingClientRect();
+                const volume = volumes[pouringTargetId];
+                const waterHeightPx = (volume / 100) * rect.height;
+                const surfaceY = rect.bottom - waterHeightPx - 3; 
+                return {
+                    start: { 
+                        x: pitcherPosRef.current.x + CONFIG.spoutOffset.x, 
+                        y: pitcherPosRef.current.y + CONFIG.spoutOffset.y 
+                    },
+                    endY: surfaceY
+                };
+            };
+
+            const streamData = getStreamData();
+
+            const resetAllVolumes = () => {
+                const zeroVols = {};
+                TARGETS_CONFIG.forEach(t => zeroVols[t.id] = 0);
+                setVolumes(zeroVols);
+            };
+
+            return (
+                <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, width: '100%', padding: 20, textAlign: 'center', pointerEvents: 'none', zIndex: 10 }}>
+                        <h1 style={{ margin: 0, color: '#334155', fontSize: '1.5rem' }}>💧 注水實驗室</h1>
+                        <p style={{ margin: '5px 0 0', color: '#64748b' }}>拖曳水壺到杯口上方，懸停即可倒水</p>
+                    </div>
+
+                    <div style={{ position: 'absolute', bottom: 340, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 15, zIndex: 20, pointerEvents: 'auto' }}>
+                        <button 
+                            onClick={resetAllVolumes}
+                            style={{ background: 'white', border: '1px solid #cbd5e1', padding: '10px 20px', borderRadius: 20, fontWeight: 'bold', color: '#475569', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}
+                        >
+                            🗑️ 清空 (Reset)
+                        </button>
+                        <button 
+                            onClick={() => setShowScale(!showScale)}
+                            style={{ 
+                                background: showScale ? '#3b82f6' : 'white', 
+                                color: showScale ? 'white' : '#475569',
+                                border: showScale ? '1px solid #3b82f6' : '1px solid #cbd5e1', 
+                                padding: '10px 20px', borderRadius: 20, fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' 
+                            }}
+                        >
+                            📏 刻度 (Scale)
+                        </button>
+                    </div>
+
+                    {streamData && (
+                        <Stream start={streamData.start} endY={streamData.endY} width={6} />
+                    )}
+
+                    <Pitcher 
+                        ref={pitcherRef}
+                        isPouring={!!pouringTargetId} 
+                        onPointerDown={handlePointerDown} 
+                    />
+
+                    <div style={{ 
+                        position: 'absolute', bottom: 0, width: '100%', height: 320, 
+                        display: 'flex', alignItems: 'flex-end',
+                        paddingBottom: 20, zIndex: 5,
+                        overflowX: 'auto',
+                    }}>
+                        <div style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100px',
+                            backgroundColor: '#e2e8f0',
+                            borderTop: '4px solid #cbd5e1',
+                            zIndex: -1,
+                        }} />
+
+                        <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-end',
+                            gap: 60, 
+                            padding: '0 60px',
+                            margin: '0 auto', 
+                            width: 'fit-content',
+                            height: '100%',
+                            paddingBottom: '60px',
+                        }}>
+                            {TARGETS_CONFIG.map(config => (
+                                <Target 
+                                    key={config.id} 
+                                    config={config} 
+                                    volume={volumes[config.id]} 
+                                    showScale={showScale} 
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
