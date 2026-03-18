@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中年級 虛擬量角器</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-slate-50">
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18.3.1';
+    import { createRoot } from 'https://esm.sh/react-dom@18.3.1/client';
+    
+    import KonvaCore from 'https://esm.sh/konva@9.3.22/lib/Core';
+    import { Circle as KonvaCircle } from 'https://esm.sh/konva@9.3.22/lib/shapes/Circle';
+    import { Line as KonvaLine } from 'https://esm.sh/konva@9.3.22/lib/shapes/Line';
+    import { Arrow as KonvaArrow } from 'https://esm.sh/konva@9.3.22/lib/shapes/Arrow';
+    import { Arc as KonvaArc } from 'https://esm.sh/konva@9.3.22/lib/shapes/Arc';
+    import { Text as KonvaText } from 'https://esm.sh/konva@9.3.22/lib/shapes/Text';
+    
+    // Explicitly attach shapes to the KonvaCore instance used by react-konva
+    KonvaCore.Circle = KonvaCircle;
+    KonvaCore.Line = KonvaLine;
+    KonvaCore.Arrow = KonvaArrow;
+    KonvaCore.Arc = KonvaArc;
+    KonvaCore.Text = KonvaText;
+
+    import { Stage, Layer, Line, Circle, Arrow, Arc, Group, Text } from 'https://esm.sh/react-konva@18.2.10?deps=react@18.3.1,react-dom@18.3.1,konva@9.3.22';
+    import { motion, AnimatePresence } from 'https://esm.sh/framer-motion@11.0.8?deps=react@18.3.1,react-dom@18.3.1';
+    import confetti from 'https://esm.sh/canvas-confetti@1.9.2';
+
+    // --- Protractor Component ---
+    const Protractor = ({ 
+      x, 
+      y, 
+      rotation, 
+      onDragMove, 
+      onRotate,
+      isInteractive = true,
+      onRotateStart,
+      onRotateEnd,
+      hideHandle = false
+    }) => {
+      const groupRef = useRef(null);
+      const [isRotating, setIsRotating] = useState(false);
+
+      useEffect(() => {
+        const handleMouseMove = (e) => {
+          if (!isRotating || !onRotate) return;
+          const stage = groupRef.current?.getStage();
+          if (!stage) return;
+          
+          const pointerPos = stage.getPointerPosition();
+          if (!pointerPos) return;
+
+          const dx = pointerPos.x - x;
+          const dy = pointerPos.y - y;
+          let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+          onRotate(angle + 90);
+        };
+
+        const handleMouseUp = () => {
+          setIsRotating(false);
+          if (onRotateEnd) onRotateEnd();
+        };
+
+        if (isRotating) {
+          window.addEventListener('mousemove', handleMouseMove);
+          window.addEventListener('touchmove', handleMouseMove);
+          window.addEventListener('mouseup', handleMouseUp);
+          window.addEventListener('touchend', handleMouseUp);
+        }
+
+        return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('touchmove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+          window.removeEventListener('touchend', handleMouseUp);
+        };
+      }, [isRotating, x, y, onRotate, onRotateEnd]);
+
+      const ticks = [];
+      for (let i = 0; i <= 180; i++) {
+        const is10 = i % 10 === 0;
+        const is5 = i % 5 === 0;
+        const length = is10 ? 20 : is5 ? 15 : 10;
+        const angleRad = (i * Math.PI) / 180;
+        
+        const outerR = 190;
+        const innerR = outerR - length;
+        
+        ticks.push(
+          <Line
+            key={`tick-${i}`}
+            points={[
+              -outerR * Math.cos(angleRad), -outerR * Math.sin(angleRad),
+              -innerR * Math.cos(angleRad), -innerR * Math.sin(angleRad)
+            ]}
+            stroke="black"
+            strokeWidth={is10 ? 2 : 1}
+          />
+        );
+
+        if (is10) {
+          const outerText = i.toString();
+          const innerText = (180 - i).toString();
+
+          const textOuterR = outerR - 25;
+          const textInnerR = outerR - 45;
+
+          ticks.push(
+            <Text
+              key={`text-outer-${i}`}
+              x={-textOuterR * Math.cos(angleRad) - 10}
+              y={-textOuterR * Math.sin(angleRad) - 6}
+              text={outerText}
+              fontSize={10}
+              fill="black"
+              align="center"
+              width={20}
+            />
+          );
+
+          ticks.push(
+            <Text
+              key={`text-inner-${i}`}
+              x={-textInnerR * Math.cos(angleRad) - 10}
+              y={-textInnerR * Math.sin(angleRad) - 6}
+              text={innerText}
+              fontSize={10}
+              fill="black"
+              align="center"
+              width={20}
+            />
+          );
+        }
+      }
+
+      const handleWheel = (e) => {
+        if (!isInteractive || !onRotate) return;
+        e.evt.preventDefault();
+        const delta = e.evt.deltaY > 0 ? 1 : -1;
+        onRotate(rotation + delta);
+      };
+
+      return (
+        <Group
+          x={x}
+          y={y}
+          rotation={rotation}
+          draggable={isInteractive}
+          onDragMove={onDragMove}
+          onWheel={handleWheel}
+          ref={groupRef}
+        >
+          <Arc
+            x={0}
+            y={0}
+            innerRadius={0}
+            outerRadius={200}
+            angle={180}
+            rotation={180}
+            fill="rgba(173, 216, 230, 0.6)"
+            stroke="black"
+            strokeWidth={1}
+          />
+          
+          <Line points={[-200, 0, 200, 0]} stroke="black" strokeWidth={1} />
+          
+          <Line points={[-10, 0, 10, 0]} stroke="red" strokeWidth={2} />
+          <Line points={[0, -10, 0, 10]} stroke="red" strokeWidth={2} />
+
+          {ticks}
+
+          {!hideHandle && (
+            <Group
+              x={0}
+              y={-220}
+              onMouseDown={(e) => {
+                if (!isInteractive) return;
+                e.cancelBubble = true;
+                setIsRotating(true);
+                if (onRotateStart) onRotateStart();
+              }}
+              onTouchStart={(e) => {
+                if (!isInteractive) return;
+                e.cancelBubble = true;
+                setIsRotating(true);
+                if (onRotateStart) onRotateStart();
+              }}
+              onMouseEnter={(e) => {
+                if (!isInteractive) return;
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'grab';
+              }}
+              onMouseLeave={(e) => {
+                if (!isInteractive) return;
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'default';
+              }}
+            >
+              <Circle radius={15} fill="white" stroke="gray" strokeWidth={2} />
+              <Text x={-6} y={-7} text="↻" fontSize={16} fill="gray" />
+            </Group>
+          )}
+        </Group>
+      );
+    };
+
+    // --- Main App Component ---
+    function App() {
+      const [phase, setPhase] = useState('prediction');
+      const [targetAngle, setTargetAngle] = useState(90);
+      const [baseRotation, setBaseRotation] = useState(0);
+      const [vertex, setVertex] = useState({ x: 400, y: 300 });
+      
+      const [predictionType, setPredictionType] = useState(null);
+      const [predictionValue, setPredictionValue] = useState(90);
+      
+      const [protractorPos, setProtractorPos] = useState({ x: 400, y: 500 });
+      const [protractorRotation, setProtractorRotation] = useState(0);
+      
+      const [measurementValue, setMeasurementValue] = useState('');
+      const [diagnosis, setDiagnosis] = useState(null);
+
+      const [isZooming, setIsZooming] = useState(false);
+      const [pointerPos, setPointerPos] = useState({ x: 0, y: 0 });
+      const stageRef = useRef(null);
+
+      const handleStageMouseMove = (e) => {
+        if (phase !== 'measurement') {
+          setIsZooming(false);
+          return;
+        }
+        const stage = e.target.getStage();
+        if (stage) {
+          const pos = stage.getPointerPosition();
+          if (pos) {
+            setPointerPos(pos);
+            
+            const dx = pos.x - protractorPos.x;
+            const dy = pos.y - protractorPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            const rad = (protractorRotation * Math.PI) / 180;
+            const relY = dx * Math.sin(-rad) + dy * Math.cos(-rad);
+            
+            const radius = 200;
+            const isWithinHotspot = 
+              distance > radius * 0.7 && 
+              distance < radius * 1.1 && 
+              relY < 10;
+              
+            setIsZooming(isWithinHotspot);
+          }
+        }
+      };
+
+      const handleStageMouseLeave = () => {
+        setIsZooming(false);
+      };
+
+      const generateQuestion = () => {
+        const angle = Math.floor(Math.random() * 141) + 20;
+        const rotation = Math.floor(Math.random() * 360);
+        const vX = 400 + (Math.random() * 40 - 20);
+        const vY = 250 + (Math.random() * 40 - 20);
+        
+        setTargetAngle(angle);
+        setBaseRotation(rotation);
+        setVertex({ x: vX, y: vY });
+        
+        setPhase('prediction');
+        setPredictionType(null);
+        setPredictionValue(90);
+        setProtractorPos({ x: 400, y: 400 });
+        setProtractorRotation(0);
+        setMeasurementValue('');
+        setDiagnosis(null);
+      };
+
+      useEffect(() => {
+        generateQuestion();
+      }, []);
+
+      const handlePredictionSubmit = () => {
+        if (!predictionType) {
+          alert('請先選擇這是一個什麼角！');
+          return;
+        }
+        setPhase('measurement');
+      };
+
+      const handleMeasurementSubmit = () => {
+        const input = parseInt(measurementValue, 10);
+        if (isNaN(input)) {
+          alert('請輸入有效的數字！');
+          return;
+        }
+
+        const dx = protractorPos.x - vertex.x;
+        const dy = protractorPos.y - vertex.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > 20) {
+          setDiagnosis({
+            type: 'center',
+            message: '中心點跑掉囉！',
+          });
+          return;
+        }
+
+        const error = Math.abs(input - targetAngle);
+        const oppositeError = Math.abs(input - (180 - targetAngle));
+        
+        if (error > 5 && oppositeError <= 5) {
+          setDiagnosis({
+            type: 'scale',
+            message: '哎呀！你是不是看錯圈了？',
+            inputAngle: input,
+          });
+          return;
+        }
+
+        if (error > 5) {
+          setDiagnosis({
+            type: 'general',
+            message: '再仔細對齊底線看看！',
+          });
+          return;
+        }
+
+        setDiagnosis({
+          type: 'success',
+          message: `🎉 測量精準！你的預測是 ${predictionValue} 度，實際測量是 ${targetAngle} 度。`,
+        });
+        setPhase('result');
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      };
+
+      const lineLength = 250;
+      const rad1 = (baseRotation * Math.PI) / 180;
+      const rad2 = ((baseRotation - targetAngle) * Math.PI) / 180;
+
+      const p1 = {
+        x: vertex.x + lineLength * Math.cos(rad1),
+        y: vertex.y + lineLength * Math.sin(rad1),
+      };
+      const p2 = {
+        x: vertex.x + lineLength * Math.cos(rad2),
+        y: vertex.y + lineLength * Math.sin(rad2),
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center py-8 font-sans">
+          <h1 className="text-3xl font-bold text-slate-800 mb-6">中年級 虛擬量角器</h1>
+          
+          <div className="relative bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200" style={{ width: 800, height: 600 }}>
+            <Stage 
+              width={800} 
+              height={600} 
+              ref={stageRef}
+              onMouseMove={handleStageMouseMove}
+              onMouseLeave={handleStageMouseLeave}
+            >
+              <Layer>
+                <Circle x={vertex.x} y={vertex.y} radius={6} fill="black" />
+                
+                <Line points={[vertex.x, vertex.y, p1.x, p1.y]} stroke="black" strokeWidth={4} lineCap="round" />
+                <Line points={[vertex.x, vertex.y, p2.x, p2.y]} stroke="black" strokeWidth={4} lineCap="round" />
+
+                {diagnosis?.type === 'center' && (
+                  <Arrow
+                    points={[protractorPos.x, protractorPos.y, vertex.x, vertex.y]}
+                    stroke="red"
+                    strokeWidth={3}
+                    fill="red"
+                    dash={[10, 5]}
+                  />
+                )}
+
+                {diagnosis?.type === 'scale' && diagnosis.inputAngle && (
+                  <Arc
+                    x={vertex.x}
+                    y={vertex.y}
+                    innerRadius={0}
+                    outerRadius={100}
+                    angle={diagnosis.inputAngle}
+                    rotation={baseRotation - diagnosis.inputAngle}
+                    fill="rgba(255, 0, 0, 0.4)"
+                    stroke="red"
+                    strokeWidth={2}
+                  />
+                )}
+
+                {(phase === 'measurement' || phase === 'result') && (
+                  <Protractor
+                    x={protractorPos.x}
+                    y={protractorPos.y}
+                    rotation={protractorRotation}
+                    onDragMove={(e) => setProtractorPos({ x: e.target.x(), y: e.target.y() })}
+                    onRotate={setProtractorRotation}
+                  />
+                )}
+
+                {isZooming && (
+                  <Group
+                    x={pointerPos.x > 600 ? pointerPos.x - 100 : pointerPos.x + 50}
+                    y={pointerPos.y < 150 ? pointerPos.y + 100 : pointerPos.y - 50}
+                    clipFunc={(ctx) => {
+                      ctx.arc(0, 0, 80, 0, Math.PI * 2, false);
+                    }}
+                  >
+                    <Circle x={0} y={0} radius={80} fill="white" />
+                    
+                    <Group
+                      x={-pointerPos.x * 3}
+                      y={-pointerPos.y * 3}
+                      scaleX={3}
+                      scaleY={3}
+                    >
+                      <Circle x={vertex.x} y={vertex.y} radius={6} fill="black" />
+                      
+                      <Line points={[vertex.x, vertex.y, p1.x, p1.y]} stroke="black" strokeWidth={4} lineCap="round" />
+                      <Line points={[vertex.x, vertex.y, p2.x, p2.y]} stroke="black" strokeWidth={4} lineCap="round" />
+
+                      <Protractor
+                        x={protractorPos.x}
+                        y={protractorPos.y}
+                        rotation={protractorRotation}
+                        isInteractive={false}
+                        hideHandle={true}
+                      />
+                    </Group>
+
+                    <Line points={[-10, 0, 10, 0]} stroke="rgba(255,0,0,0.8)" strokeWidth={2} />
+                    <Line points={[0, -10, 0, 10]} stroke="rgba(255,0,0,0.8)" strokeWidth={2} />
+
+                    <Circle x={0} y={0} radius={80} stroke="#4f46e5" strokeWidth={6} />
+                  </Group>
+                )}
+              </Layer>
+            </Stage>
+          </div>
+
+          <div className="w-[800px] mt-6 relative">
+            <AnimatePresence mode="wait">
+              {phase === 'prediction' && (
+                <motion.div
+                  key="prediction-hud"
+                  initial={{ y: 50, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 50, opacity: 0 }}
+                  className="w-full bg-white shadow-md rounded-2xl p-6 border border-slate-200"
+                >
+                  <h2 className="text-lg font-bold text-slate-800 mb-4 text-center">先用眼睛看一看，這是一個什麼角？大約幾度？</h2>
+                  
+                  <div className="flex flex-col sm:flex-row gap-5 items-end">
+                    <div className="flex-1 w-full">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">1. 選擇角的種類：</label>
+                      <div className="flex gap-2">
+                        {['acute', 'right', 'obtuse'].map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => setPredictionType(type)}
+                            className={`flex-1 py-2 px-1 rounded-xl border-2 transition-all text-sm ${
+                              predictionType === type
+                                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-bold'
+                                : 'border-slate-200 hover:border-indigo-200 text-slate-600'
+                            }`}
+                          >
+                            {type === 'acute' ? '銳角 (<90°)' : type === 'right' ? '直角 (90°)' : '鈍角 (>90°)'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex-1 w-full">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        2. 估測角度：<span className="text-indigo-600 font-bold text-lg ml-1">{predictionValue}°</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="180"
+                        value={predictionValue}
+                        onChange={(e) => setPredictionValue(parseInt(e.target.value, 10))}
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                      <div className="flex justify-between text-xs text-slate-400 mt-1 px-1">
+                        <span>0°</span>
+                        <span>90°</span>
+                        <span>180°</span>
+                      </div>
+                    </div>
+
+                    <div className="w-full sm:w-auto pb-1">
+                      <button
+                        onClick={handlePredictionSubmit}
+                        className="w-full sm:w-32 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors"
+                      >
+                        開始測量
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {(phase === 'measurement' || phase === 'result') && (
+                <motion.div
+                  key="measurement-hud"
+                  initial={{ y: 50, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 50, opacity: 0 }}
+                  className="w-full bg-white shadow-md rounded-2xl p-6 border border-slate-200 flex flex-col gap-4"
+                >
+                  <div className="flex items-end gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">輸入測量結果 (度)：</label>
+                      <input
+                        type="number"
+                        value={measurementValue}
+                        onChange={(e) => setMeasurementValue(e.target.value)}
+                        disabled={phase === 'result'}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 text-lg"
+                        placeholder="例如：60"
+                      />
+                    </div>
+                    <button
+                      onClick={phase === 'result' ? generateQuestion : handleMeasurementSubmit}
+                      className={`px-8 py-2.5 rounded-xl font-bold text-white transition-colors h-[46px] ${
+                        phase === 'result'
+                          ? 'bg-emerald-500 hover:bg-emerald-600'
+                          : 'bg-indigo-600 hover:bg-indigo-700'
+                      }`}
+                    >
+                      {phase === 'result' ? '下一題' : '送出檢查'}
+                    </button>
+                  </div>
+
+                  <AnimatePresence>
+                    {diagnosis && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                        animate={{ opacity: 1, height: 'auto', marginTop: 8 }}
+                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                        className={`p-3 rounded-xl border overflow-hidden ${
+                          diagnosis.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+                          diagnosis.type === 'center' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                          'bg-red-50 border-red-200 text-red-800'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                           <span className="text-xl">
+                            {diagnosis.type === 'success' ? '🎉' : diagnosis.type === 'center' ? '🎯' : '💡'}
+                          </span>
+                          <div>
+                            <p className="font-bold">{diagnosis.message}</p>
+                            {diagnosis.type === 'scale' && (
+                              <p className="mt-0.5 text-sm opacity-90">
+                                你輸入的是 {diagnosis.inputAngle}度 (紅色範圍)，但原本的角是{targetAngle > 90 ? '鈍角' : targetAngle < 90 ? '銳角' : '直角'}喔！
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

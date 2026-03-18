@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍫 巧克力工廠大冒險</title>
+    <script src="https://unpkg.com/konva@9.3.6/konva.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+:root {
+    --primary-color: #FF9800;
+    --secondary-color: #FF5722;
+    --text-color: #FFFFFF;
+    --border-radius: 12px;
+
+    /* 自由模式 (黑板風格) 預設變數 */
+    --body-bg: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 100%); /* 清新淺藍 */
+    --panel-bg: #2b4f3b; /* 黑板綠色 */
+    --container-border: #8D6E63; /* 木頭邊框 */
+    --header-color: #FFF9C4; /* 粉筆黃 */
+    --canvas-border: #8D6E63;
+}
+
+body.mode-game {
+    /* 闖關模式 (巧克力風格) 變數 */
+    --body-bg: linear-gradient(135deg, #FFF8E7 0%, #F5DEB3 100%); /* 米色背景 */
+    --panel-bg: #4E342E; /* 巧克力深棕色 */
+    --container-border: #3E2723; /* 更深的巧克力邊框 */
+    --header-color: #FFD54F;
+    --canvas-border: #6D4C41;
+}
+
+body {
+    font-family: 'Nunito', '微軟正黑體', sans-serif;
+    background: var(--body-bg);
+    background-attachment: fixed;
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    transition: background 0.5s ease;
+}
+
+.container {
+    max-width: 850px;
+    width: 100%;
+    background-color: var(--panel-bg);
+    padding: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.3);
+    border: 12px solid var(--container-border);
+    text-align: center;
+    position: relative;
+    transition: all 0.5s ease;
+}
+
+.nav-menu {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+}
+
+.nav-menu a {
+    text-decoration: none;
+    padding: 12px 24px;
+    background-color: transparent;
+    color: #FFECB3;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 1.1rem;
+    transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    border: 2px dashed #FFCA28;
+    cursor: pointer;
+}
+
+.nav-menu a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+}
+
+.nav-menu a.active {
+    background-color: #FF9800;
+    color: white;
+    border-color: #FF9800;
+    border-style: solid;
+    box-shadow: 0 4px 10px rgba(255, 152, 0, 0.4);
+}
+
+header h1 {
+    color: var(--header-color); 
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin-bottom: 16px;
+    margin-top: 0;
+    text-shadow: 2px 2px 0px rgba(0,0,0,0.4);
+    letter-spacing: 2px;
+    transition: color 0.5s ease;
+}
+
+.level-panel {
+    background-color: #FFF8E1;
+    color: #3E2723;
+    padding: 15px 20px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    border: 4px dashed #FFCA28;
+    text-align: left;
+}
+
+.level-panel h2 {
+    margin: 0 0 8px 0;
+    color: #E65100;
+    font-size: 1.5rem;
+}
+
+.level-panel p {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.controls, .answer-panel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 20px;
+    border: 3px dashed #FFCC80;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.input-group label, .answer-panel label {
+    font-weight: 800;
+    color: #FFECB3;
+    font-size: 1.2rem;
+}
+
+.input-group input, .answer-panel input {
+    width: 90px;
+    padding: 10px;
+    border: 3px solid #FFCA28;
+    border-radius: 15px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    text-align: center;
+    outline: none;
+    color: #4E342E;
+    background-color: #FFF;
+    transition: all 0.3s ease;
+}
+
+.input-group input:focus, .answer-panel input:focus {
+    border-color: #FF9800;
+    box-shadow: 0 0 0 4px rgba(255, 152, 0, 0.3);
+    transform: scale(1.05);
+}
+
+button {
+    background-color: #FF7043;
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    font-size: 1.2rem;
+    font-weight: 900;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 6px 0 #D84315, 0 10px 10px rgba(0, 0, 0, 0.2);
+}
+
+button:hover {
+    background-color: #FF8A65;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 0 #D84315, 0 12px 12px rgba(0, 0, 0, 0.3);
+}
+
+button:active {
+    transform: translateY(6px);
+    box-shadow: 0 0 0 #D84315, 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.formula-container {
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 20px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    border: 4px solid #FF9800;
+    position: relative;
+    z-index: 1;
+}
+
+.formula {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #E65100;
+    letter-spacing: 1px;
+}
+
+#canvas-container {
+    display: flex;
+    justify-content: center;
+    border: 8px solid var(--canvas-border); 
+    border-radius: 12px;
+    background-color: #FFFFFF;
+    overflow: hidden;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+    transition: border-color 0.5s ease;
+}
+
+/* Overlay Styles */
+.overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.overlay-content {
+    background-color: #FFF8E1;
+    padding: 40px;
+    border-radius: 24px;
+    text-align: center;
+    border: 6px solid #FFCA28;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    max-width: 400px;
+    animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.overlay-content h2 {
+    color: #E65100;
+    font-size: 2.5rem;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.overlay-content p {
+    color: #4E342E;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 30px;
+}
+
+@keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+    </style>
+</head>
+<body class="mode-free">
+    <div class="container">
+        <nav class="nav-menu">
+            <a href="#" id="btnFreeMode" class="active">自由探索模式</a>
+            <a href="#" id="btnGameMode">闖關冒險模式</a>
+        </nav>
+
+        <header>
+            <h1>🍫 巧克力工廠大冒險</h1>
+        </header>
+        
+        <div class="level-panel" id="levelPanel" style="display: none;">
+            <h2 id="levelName">載入中...</h2>
+            <p id="levelPrompt">載入中...</p>
+        </div>
+
+        <div class="controls" id="controlsPanel">
+            <div class="input-group" id="widthGroup">
+                <label for="widthInput">巧克力長度:</label>
+                <input type="number" id="widthInput" min="10" max="20" value="15">
+            </div>
+            <div class="input-group" id="heightGroup">
+                <label for="heightInput">巧克力寬度:</label>
+                <input type="number" id="heightInput" min="10" max="20" value="12">
+            </div>
+        </div>
+
+        <div class="answer-panel" id="answerPanel" style="display: none;">
+            <label for="answerInput">你的答案：</label>
+            <input type="number" id="answerInput" placeholder="輸入數字">
+            <button id="submitBtn">送出答案</button>
+        </div>
+
+        <div class="formula-container" id="formulaContainer">
+            <div id="formulaDisplay" class="formula">15 × 12 = (10 + 5) × (10 + 2) = 100 + 50 + 20 + 10 = 180</div>
+        </div>
+
+        <div id="canvas-container"></div>
+    </div>
+
+    <div id="successOverlay" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2 id="successTitle">🎉 過關！</h2>
+            <p id="successMessage">太棒了，你完成了任務！</p>
+            <button id="nextLevelBtn">進入下一關</button>
+        </div>
+    </div>
+
+    <script>
+// 常數設定
+const UNIT_SIZE = 25;
+const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 600;
+
+// 顏色設定 (巧克力口味)
+const COLORS = {
+    topLeft: 'rgba(255, 182, 193, 0.8)',    // 粉色 (草莓)
+    topRight: 'rgba(139, 69, 19, 0.8)',     // 棕色 (黑巧克力)
+    bottomLeft: 'rgba(255, 255, 153, 0.8)', // 黃色 (香蕉)
+    bottomRight: 'rgba(152, 251, 152, 0.8)' // 綠色 (薄荷)
+};
+
+// DOM 元素
+const btnFreeMode = document.getElementById('btnFreeMode');
+const btnGameMode = document.getElementById('btnGameMode');
+const levelPanel = document.getElementById('levelPanel');
+const levelNameEl = document.getElementById('levelName');
+const levelPromptEl = document.getElementById('levelPrompt');
+const controlsPanel = document.getElementById('controlsPanel');
+const widthInput = document.getElementById('widthInput');
+const heightInput = document.getElementById('heightInput');
+const answerPanel = document.getElementById('answerPanel');
+const answerInput = document.getElementById('answerInput');
+const submitBtn = document.getElementById('submitBtn');
+const formulaContainer = document.getElementById('formulaContainer');
+const formulaDisplay = document.getElementById('formulaDisplay');
+const successOverlay = document.getElementById('successOverlay');
+const nextLevelBtn = document.getElementById('nextLevelBtn');
+const successTitle = document.getElementById('successTitle');
+const successMessage = document.getElementById('successMessage');
+
+// Konva 變數
+let stage, layer;
+let gridGroup, rectsGroup, splittersGroup, labelsGroup;
+let rectTL, rectTR, rectBL, rectBR;
+let labelTL, labelTR, labelBL, labelBR;
+let vGroup, hGroup;
+
+// 當前狀態
+let currentWidth = 15;
+let currentHeight = 12;
+let splitX = 10;
+let splitY = 10;
+let currentLevelIndex = 0;
+let isLevelCompleted = false;
+let currentMode = 'free'; // 'free' or 'game'
+
+const levels = [
+    {
+        id: 1,
+        name: "第 1 關：【見習學徒】遇見 10 的魔法",
+        prompt: "請用雷射線把它切開。秘訣：切出一個 10 × 10 的正方形最好算！",
+        initW: 14,
+        initH: 12,
+        initSplitX: 7,
+        initSplitY: 6,
+        showInputs: false,
+        showAnswer: false,
+        checkWin: () => splitX === 10 && splitY === 10
+    },
+    {
+        id: 2,
+        name: "第 2 關：【粗心的包裝員】尋找消失的數字",
+        prompt: "右下角的巧克力面積標籤不見了，請在下方輸入框告訴我它是多少？",
+        initW: 15,
+        initH: 13,
+        initSplitX: 10,
+        initSplitY: 10,
+        showInputs: false,
+        showAnswer: true,
+        hideLabel: 'BR',
+        lockSplitters: true,
+        checkWin: (ans) => ans === 15
+    },
+    {
+        id: 3,
+        name: "第 3 關：【廠長的要求】精準切割",
+        prompt: "廠長想要一塊『面積剛好是 60』的長條形巧克力。請動手切出這個區塊！",
+        initW: 16,
+        initH: 15,
+        initSplitX: 8,
+        initSplitY: 8,
+        showInputs: false,
+        showAnswer: false,
+        checkWin: () => {
+            const areas = [
+                splitX * splitY,
+                (currentWidth - splitX) * splitY,
+                splitX * (currentHeight - splitY),
+                (currentWidth - splitX) * (currentHeight - splitY)
+            ];
+            return areas.includes(60);
+        }
+    },
+    {
+        id: 4,
+        name: "第 4 關：【出貨大挑戰】總和結算",
+        prompt: "完美切開了！請告訴送貨員，這塊大巧克力總共有幾小格？",
+        initW: 14,
+        initH: 16,
+        initSplitX: 10,
+        initSplitY: 10,
+        showInputs: false,
+        showAnswer: true,
+        lockSplitters: true,
+        checkWin: (ans) => ans === 224
+    },
+    {
+        id: 5,
+        name: "第 5 關：【駭客入侵】破解長寬密碼",
+        prompt: "機器設定跑掉了！請依照面積，逆推調整拉桿，找出這塊巧克力原本的長和寬！(提示：面積分別為 100, 70, 20, 14)",
+        initW: 11, 
+        initH: 11, 
+        initSplitX: 10,
+        initSplitY: 10,
+        showInputs: true,
+        showAnswer: false,
+        lockSplitters: true,
+        checkWin: () => currentWidth === 17 && currentHeight === 12
+    },
+    {
+        id: 6,
+        name: "第 6 關：【巨無霸訂單】極限心算",
+        prompt: "超級大訂單來了！請你自己用 10 的魔法切開，並算出最後的總格數！",
+        initW: 19,
+        initH: 19,
+        initSplitX: 9,
+        initSplitY: 9,
+        showInputs: false,
+        showAnswer: true,
+        checkWin: (ans) => splitX === 10 && splitY === 10 && ans === 361
+    },
+    {
+        id: 7,
+        name: "第 7 關：【終極大師】其實不一定要切 10？",
+        prompt: "老闆說不准切 10！請試著把它切成四塊『面積一模一樣大』的巧克力！",
+        initW: 14,
+        initH: 12,
+        initSplitX: 10,
+        initSplitY: 10,
+        showInputs: false,
+        showAnswer: false,
+        checkWin: () => splitX === 7 && splitY === 6
+    }
+];
+
+function initCanvas() {
+    stage = new Konva.Stage({
+        container: 'canvas-container',
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT
+    });
+
+    layer = new Konva.Layer();
+    stage.add(layer);
+
+    rectsGroup = new Konva.Group();
+    gridGroup = new Konva.Group();
+    labelsGroup = new Konva.Group();
+    splittersGroup = new Konva.Group();
+
+    layer.add(rectsGroup);
+    layer.add(gridGroup);
+    layer.add(labelsGroup);
+    layer.add(splittersGroup);
+
+    setMode('free');
+}
+
+btnFreeMode.addEventListener('click', (e) => {
+    e.preventDefault();
+    setMode('free');
+});
+
+btnGameMode.addEventListener('click', (e) => {
+    e.preventDefault();
+    setMode('game');
+});
+
+function setMode(mode) {
+    currentMode = mode;
+    if (mode === 'free') {
+        document.body.className = 'mode-free';
+        btnFreeMode.classList.add('active');
+        btnGameMode.classList.remove('active');
+        levelPanel.style.display = 'none';
+        formulaContainer.style.display = 'block';
+        controlsPanel.style.display = 'flex';
+        answerPanel.style.display = 'none';
+        
+        currentWidth = 15;
+        currentHeight = 12;
+        splitX = 10;
+        splitY = 10;
+        widthInput.value = currentWidth;
+        heightInput.value = currentHeight;
+        
+        drawAll();
+    } else {
+        document.body.className = 'mode-game';
+        btnFreeMode.classList.remove('active');
+        btnGameMode.classList.add('active');
+        levelPanel.style.display = 'block';
+        formulaContainer.style.display = 'none';
+        loadLevel(0);
+    }
+}
+
+function loadLevel(index) {
+    if (index >= levels.length) {
+        // 全破
+        successTitle.innerText = "🏆 遊戲通關！";
+        successMessage.innerText = "你已經成為真正的巧克力切割大師！";
+        nextLevelBtn.style.display = 'none';
+        successOverlay.style.display = 'flex';
+        confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+        return;
+    }
+
+    currentLevelIndex = index;
+    isLevelCompleted = false;
+    const level = levels[index];
+
+    levelNameEl.innerText = level.name;
+    levelPromptEl.innerText = level.prompt;
+
+    controlsPanel.style.display = level.showInputs ? 'flex' : 'none';
+    answerPanel.style.display = level.showAnswer ? 'flex' : 'none';
+    answerInput.value = '';
+
+    currentWidth = level.initW;
+    currentHeight = level.initH;
+    splitX = level.initSplitX;
+    splitY = level.initSplitY;
+
+    widthInput.value = currentWidth;
+    heightInput.value = currentHeight;
+
+    drawAll();
+}
+
+function drawAll() {
+    gridGroup.destroyChildren();
+    rectsGroup.destroyChildren();
+    labelsGroup.destroyChildren();
+    splittersGroup.destroyChildren();
+
+    const pixelWidth = currentWidth * UNIT_SIZE;
+    const pixelHeight = currentHeight * UNIT_SIZE;
+
+    const offsetX = (CANVAS_WIDTH - pixelWidth) / 2;
+    const offsetY = (CANVAS_HEIGHT - pixelHeight) / 2;
+
+    layer.x(offsetX);
+    layer.y(offsetY);
+
+    // 1. 繪製四個區塊的背景
+    rectTL = new Konva.Rect({ x: 0, y: 0, fill: COLORS.topLeft });
+    rectTR = new Konva.Rect({ y: 0, fill: COLORS.topRight });
+    rectBL = new Konva.Rect({ x: 0, fill: COLORS.bottomLeft });
+    rectBR = new Konva.Rect({ fill: COLORS.bottomRight });
+    
+    rectsGroup.add(rectTL, rectTR, rectBL, rectBR);
+
+    // 2. 繪製網格線
+    gridGroup.add(new Konva.Rect({
+        x: 0, y: 0,
+        width: pixelWidth,
+        height: pixelHeight,
+        stroke: '#2D3436',
+        strokeWidth: 3
+    }));
+
+    for (let i = 1; i < currentWidth; i++) {
+        gridGroup.add(new Konva.Line({
+            points: [i * UNIT_SIZE, 0, i * UNIT_SIZE, pixelHeight],
+            stroke: '#7F8C8D',
+            strokeWidth: 1
+        }));
+    }
+
+    for (let i = 1; i < currentHeight; i++) {
+        gridGroup.add(new Konva.Line({
+            points: [0, i * UNIT_SIZE, pixelWidth, i * UNIT_SIZE],
+            stroke: '#7F8C8D',
+            strokeWidth: 1
+        }));
+    }
+
+    // 3. 繪製文字標籤
+    const labelConfig = {
+        fontSize: 22,
+        fontFamily: 'Nunito, Arial, sans-serif',
+        fill: '#2D3436',
+        align: 'center',
+        fontStyle: 'bold'
+    };
+
+    labelTL = new Konva.Text({ ...labelConfig });
+    labelTR = new Konva.Text({ ...labelConfig, fill: '#FFFFFF' }); 
+    labelBL = new Konva.Text({ ...labelConfig });
+    labelBR = new Konva.Text({ ...labelConfig });
+
+    labelsGroup.add(labelTL, labelTR, labelBL, labelBR);
+
+    // 4. 繪製切割線
+    const isLocked = currentMode === 'game' ? levels[currentLevelIndex].lockSplitters : false;
+
+    vGroup = new Konva.Group({
+        x: splitX * UNIT_SIZE,
+        y: 0,
+        draggable: !isLocked,
+        dragBoundFunc: function (pos) {
+            let relativeX = pos.x - offsetX;
+            if (relativeX < UNIT_SIZE) relativeX = UNIT_SIZE;
+            if (relativeX > pixelWidth - UNIT_SIZE) relativeX = pixelWidth - UNIT_SIZE;
+            let snappedX = Math.round(relativeX / UNIT_SIZE) * UNIT_SIZE;
+            return { x: snappedX + offsetX, y: this.absolutePosition().y };
+        }
+    });
+
+    const vSplitter = new Konva.Line({
+        points: [0, -15, 0, pixelHeight + 15],
+        stroke: '#D63031',
+        strokeWidth: 4,
+        dash: [10, 8]
+    });
+
+    const vHit = new Konva.Line({
+        points: [0, -15, 0, pixelHeight + 15],
+        stroke: 'transparent',
+        strokeWidth: 24
+    });
+
+    vGroup.add(vSplitter, vHit);
+
+    hGroup = new Konva.Group({
+        x: 0,
+        y: splitY * UNIT_SIZE,
+        draggable: !isLocked,
+        dragBoundFunc: function (pos) {
+            let relativeY = pos.y - offsetY;
+            if (relativeY < UNIT_SIZE) relativeY = UNIT_SIZE;
+            if (relativeY > pixelHeight - UNIT_SIZE) relativeY = pixelHeight - UNIT_SIZE;
+            let snappedY = Math.round(relativeY / UNIT_SIZE) * UNIT_SIZE;
+            return { x: this.absolutePosition().x, y: snappedY + offsetY };
+        }
+    });
+
+    const hSplitter = new Konva.Line({
+        points: [-15, 0, pixelWidth + 15, 0],
+        stroke: '#D63031',
+        strokeWidth: 4,
+        dash: [10, 8]
+    });
+
+    const hHit = new Konva.Line({
+        points: [-15, 0, pixelWidth + 15, 0],
+        stroke: 'transparent',
+        strokeWidth: 24
+    });
+
+    hGroup.add(hSplitter, hHit);
+
+    if (!isLocked) {
+        vGroup.on('mouseenter', () => stage.container().style.cursor = 'ew-resize');
+        vGroup.on('mouseleave', () => stage.container().style.cursor = 'default');
+        hGroup.on('mouseenter', () => stage.container().style.cursor = 'ns-resize');
+        hGroup.on('mouseleave', () => stage.container().style.cursor = 'default');
+    }
+
+    vGroup.on('dragmove', () => {
+        splitX = Math.round(vGroup.x() / UNIT_SIZE);
+        updateDynamicElements();
+        checkAutoWin();
+    });
+
+    hGroup.on('dragmove', () => {
+        splitY = Math.round(hGroup.y() / UNIT_SIZE);
+        updateDynamicElements();
+        checkAutoWin();
+    });
+
+    splittersGroup.add(vGroup, hGroup);
+
+    updateDynamicElements();
+}
+
+function updateDynamicElements() {
+    const pixelWidth = currentWidth * UNIT_SIZE;
+    const pixelHeight = currentHeight * UNIT_SIZE;
+    const splitPixelX = splitX * UNIT_SIZE;
+    const splitPixelY = splitY * UNIT_SIZE;
+
+    rectTL.width(splitPixelX);
+    rectTL.height(splitPixelY);
+
+    rectTR.x(splitPixelX);
+    rectTR.width(pixelWidth - splitPixelX);
+    rectTR.height(splitPixelY);
+
+    rectBL.y(splitPixelY);
+    rectBL.width(splitPixelX);
+    rectBL.height(pixelHeight - splitPixelY);
+
+    rectBR.x(splitPixelX);
+    rectBR.y(splitPixelY);
+    rectBR.width(pixelWidth - splitPixelX);
+    rectBR.height(pixelHeight - splitPixelY);
+
+    const w1 = splitX;
+    const w2 = currentWidth - splitX;
+    const h1 = splitY;
+    const h2 = currentHeight - splitY;
+
+    const areaTL = w1 * h1;
+    const areaTR = w2 * h1;
+    const areaBL = w1 * h2;
+    const areaBR = w2 * h2;
+
+    updateLabel(labelTL, `${w1} × ${h1}\n= ${areaTL}`, 0, 0, splitPixelX, splitPixelY);
+    updateLabel(labelTR, `${w2} × ${h1}\n= ${areaTR}`, splitPixelX, 0, pixelWidth - splitPixelX, splitPixelY);
+    updateLabel(labelBL, `${w1} × ${h2}\n= ${areaBL}`, 0, splitPixelY, splitPixelX, pixelHeight - splitPixelY);
+    
+    const hideLabel = currentMode === 'game' ? levels[currentLevelIndex].hideLabel : null;
+    if (hideLabel === 'BR') {
+        updateLabel(labelBR, "?", splitPixelX, splitPixelY, pixelWidth - splitPixelX, pixelHeight - splitPixelY);
+    } else {
+        updateLabel(labelBR, `${w2} × ${h2}\n= ${areaBR}`, splitPixelX, splitPixelY, pixelWidth - splitPixelX, pixelHeight - splitPixelY);
+    }
+
+    if (currentMode === 'free') {
+        const total = areaTL + areaTR + areaBL + areaBR;
+        formulaDisplay.innerText = `${currentWidth} × ${currentHeight} = (${w1} + ${w2}) × (${h1} + ${h2}) = ${areaTL} + ${areaTR} + ${areaBL} + ${areaBR} = ${total}`;
+    }
+}
+
+function updateLabel(label, text, x, y, width, height) {
+    label.text(text);
+    label.x(x + width / 2 - label.width() / 2);
+    label.y(y + height / 2 - label.height() / 2);
+}
+
+function handleInputUpdate() {
+    let w = parseInt(widthInput.value);
+    let h = parseInt(heightInput.value);
+    
+    if (isNaN(w) || w < 10) w = 10;
+    if (w > 20) w = 20;
+    if (isNaN(h) || h < 10) h = 10;
+    if (h > 20) h = 20;
+    
+    currentWidth = w;
+    currentHeight = h;
+    
+    // Ensure splitters don't go out of bounds
+    if (splitX >= currentWidth) splitX = currentWidth - 1;
+    if (splitY >= currentHeight) splitY = currentHeight - 1;
+
+    drawAll();
+    checkAutoWin();
+}
+
+function checkAutoWin() {
+    if (currentMode !== 'game' || isLevelCompleted) return;
+    const level = levels[currentLevelIndex];
+    if (!level.showAnswer) {
+        if (level.checkWin()) {
+            triggerWin();
+        }
+    }
+}
+
+function triggerWin() {
+    isLevelCompleted = true;
+    confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+    });
+    successOverlay.style.display = 'flex';
+}
+
+widthInput.addEventListener('change', handleInputUpdate);
+heightInput.addEventListener('change', handleInputUpdate);
+
+submitBtn.addEventListener('click', () => {
+    if (isLevelCompleted) return;
+    const level = levels[currentLevelIndex];
+    const ans = parseInt(answerInput.value);
+    if (level.checkWin(ans)) {
+        triggerWin();
+    } else {
+        // 答錯動畫
+        answerInput.style.animation = 'shake 0.5s';
+        answerInput.style.borderColor = 'red';
+        setTimeout(() => {
+            answerInput.style.animation = '';
+            answerInput.style.borderColor = '';
+        }, 500);
+    }
+});
+
+nextLevelBtn.addEventListener('click', () => {
+    successOverlay.style.display = 'none';
+    loadLevel(currentLevelIndex + 1);
+});
+
+// Add shake animation to CSS dynamically
+const style = document.createElement('style');
+style.innerHTML = `
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+}`;
+document.head.appendChild(style);
+
+window.onload = initCanvas;
+    </script>
+</body>
+</html>
