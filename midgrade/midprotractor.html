@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>虛擬量角器防呆 × 角度自由實驗室</title>
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --primary-dark: #357ABD;
+            --secondary: #F39C12;
+            --bg-color: #F5F7FA;
+            --text-color: #2C3E50;
+            --panel-bg: #FFFFFF;
+            --error: #E74C3C;
+            --success: #2ECC71;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex; flex-direction: column;
+            align-items: center; min-height: 100vh;
+        }
+
+        /* 頂部導覽列 */
+        header {
+            width: 100%; max-width: 1100px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; margin-top: 10px;
+            background: var(--panel-bg); border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        h1 { margin: 0; font-size: 22px; color: var(--primary-dark); }
+
+        .tabs { display: flex; gap: 10px; }
+        .tab-btn {
+            padding: 10px 20px; font-size: 16px; font-weight: bold;
+            border: none; border-radius: 8px; cursor: pointer;
+            background: #E0E6ED; color: #7F8C8D;
+            transition: all 0.3s ease;
+        }
+        .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 2px 8px rgba(74, 144, 226, 0.4); }
+
+        /* 主要內容區 (Grid 排版) */
+        main {
+            width: 100%; max-width: 1100px;
+            display: grid; grid-template-columns: 250px 1fr; gap: 20px;
+            margin-top: 20px; position: relative;
+        }
+
+        /* 當在模式一時，隱藏側邊欄，讓畫布置中 */
+        main.mode-1 { grid-template-columns: 1fr; }
+        main.mode-1 #palette { display: none; }
+
+        /* 左側素材庫 (Palette) */
+        #palette {
+            background: var(--panel-bg); border-radius: 12px;
+            padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        #palette h3 { margin-top: 0; color: var(--primary-dark); text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        .palette-btn {
+            padding: 12px; font-size: 15px; font-weight: bold;
+            border: 2px solid transparent; border-radius: 8px; cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .palette-btn:active { transform: scale(0.95); }
+        .btn-color-1 { background: rgba(231, 76, 60, 0.1); border-color: #E74C3C; color: #C0392B; }
+        .btn-color-2 { background: rgba(46, 204, 113, 0.1); border-color: #2ECC71; color: #27AE60; }
+        .btn-color-3 { background: rgba(155, 89, 182, 0.1); border-color: #9B59B6; color: #8E44AD; }
+
+        /* 畫布與控制區容器 */
+        .workspace { display: flex; flex-direction: column; gap: 20px; }
+
+        /* 畫布容器 */
+        .canvas-container {
+            background: var(--panel-bg); border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+            overflow: hidden; display: flex; justify-content: center;
+            position: relative;
+        }
+        canvas { display: block; cursor: default; }
+
+        /* 底部控制面板 */
+        .control-panel {
+            background: var(--panel-bg); border-radius: 12px;
+            padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; gap: 15px;
+            justify-content: center; align-items: center;
+        }
+
+        .measure-input-group { display: flex; align-items: center; gap: 15px; }
+        input[type="number"] {
+            padding: 10px; font-size: 18px; width: 100px;
+            border: 2px solid #BDC3C7; border-radius: 8px; text-align: center;
+        }
+        .btn-submit {
+            padding: 10px 25px; font-size: 18px; font-weight: bold;
+            background: var(--secondary); color: white;
+            border: none; border-radius: 8px; cursor: pointer;
+            transition: transform 0.1s, background 0.3s;
+        }
+        .btn-submit:active { transform: scale(0.95); }
+        .btn-refresh { background: #95A5A6; }
+
+        /* 提示訊息 (Toast) */
+        .toast {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; border-radius: 30px; font-size: 16px; font-weight: bold;
+            color: white; background: rgba(44, 62, 80, 0.95);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+            z-index: 100; text-align: center; white-space: pre-line;
+        }
+        .toast.show { opacity: 1; }
+        .toast.success { background: rgba(46, 204, 113, 0.95); }
+        .toast.error { background: rgba(231, 76, 60, 0.95); }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📐 Angle Lab Ultra</h1>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchMode(1)">測量特訓班</button>
+            <button class="tab-btn" onclick="switchMode(2)">角度自由實驗室</button>
+        </div>
+    </header>
+
+    <main id="main-layout" class="mode-1">
+        <!-- 模式二：左側素材庫 -->
+        <aside id="palette">
+            <h3>🎨 產生角物件</h3>
+            <p style="font-size: 13px; color: #7f8c8d; margin-top: -5px; text-align: center;">點擊生成，可自由拖曳與旋轉</p>
+            <button class="palette-btn btn-color-1" onclick="spawnAngle(30, 100, 'rgba(231, 76, 60, 0.6)')"><span>30°</span><span>(短邊)</span></button>
+            <button class="palette-btn btn-color-1" onclick="spawnAngle(30, 220, 'rgba(231, 76, 60, 0.6)')"><span>30°</span><span>(長邊)</span></button>
+            
+            <button class="palette-btn btn-color-2" onclick="spawnAngle(45, 120, 'rgba(46, 204, 113, 0.6)')"><span>45°</span><span>(短邊)</span></button>
+            <button class="palette-btn btn-color-2" onclick="spawnAngle(45, 250, 'rgba(46, 204, 113, 0.6)')"><span>45°</span><span>(長邊)</span></button>
+
+            <button class="palette-btn btn-color-3" onclick="spawnAngle(60, 150, 'rgba(155, 89, 182, 0.6)')"><span>60°</span><span>(中邊)</span></button>
+            <button class="palette-btn btn-color-3" onclick="spawnAngle(60, 280, 'rgba(155, 89, 182, 0.6)')"><span>60°</span><span>(特長)</span></button>
+            
+            <button class="btn-submit btn-refresh" style="margin-top: auto;" onclick="clearSandbox()">🗑️ 清空沙盒</button>
+        </aside>
+
+        <div class="workspace">
+            <div class="canvas-container">
+                <div id="toast" class="toast">提示訊息</div>
+                <!-- 原生 Canvas -->
+                <canvas id="appCanvas" width="850" height="550"></canvas>
+            </div>
+
+            <!-- 模式一：測量特訓班 控制區 -->
+            <div id="panel-mode1" class="control-panel">
+                <div style="color: #7F8C8D;">請拖曳量角器對準圖形，並輸入測量結果。拖曳量角器上方橘色圓點可旋轉。</div>
+                <div class="measure-input-group">
+                    <label style="font-size: 18px; font-weight: bold;">測量度數：</label>
+                    <input type="number" id="angleInput" placeholder="度" min="0" max="180">
+                    <button class="btn-submit" onclick="checkMeasurement()">送出檢查</button>
+                    <button class="btn-submit btn-refresh" onclick="initMode1()">重新出題</button>
+                </div>
+            </div>
+            
+            <!-- 模式二：提示區 -->
+            <div id="panel-mode2" class="control-panel hidden">
+                <div style="color: #2C3E50; font-size: 16px; font-weight: bold;">
+                    💡 實驗任務：試著把「不同邊長」但「度數相同」的角疊在一起，看看會發生什麼事！
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+/**
+ * ==========================================
+ * 系統核心與幾何數學函式
+ * ==========================================
+ */
+const canvas = document.getElementById('appCanvas');
+const ctx = canvas.getContext('2d');
+
+// 幾何輔助函式
+const deg2rad = (deg) => deg * Math.PI / 180;
+const rad2deg = (rad) => rad * 180 / Math.PI;
+const getDist = (p1, p2) => Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+// 計算點到線段的最短距離 (用於滑鼠點擊角的邊線偵測)
+function distToSegment(p, v, w) {
+    let l2 = getDist(v, w) ** 2;
+    if (l2 === 0) return getDist(p, v);
+    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return getDist(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
+}
+
+/**
+ * ==========================================
+ * Canvas 物件管理系統 (Object System)
+ * ==========================================
+ */
+let currentMode = 1;
+let renderObjects = []; // 儲存畫布上所有可互動的物件 (Z-index 由陣列順序決定，最後面的在最上層)
+let activeDrag = null;  // 目前正在拖曳的物件與狀態
+
+// 基礎物件類別
+class CanvasObject {
+    constructor() { this.id = Math.random().toString(36).substr(2, 9); }
+    draw(ctx) {}
+    hitTest(mx, my) { return null; } // 回傳命中部位的字串，沒命中回傳 null
+}
+
+// 虛擬量角器 (Mode 1)
+class Protractor extends CanvasObject {
+    constructor(x, y) {
+        super();
+        this.x = x; this.y = y;
+        this.rot = 0; // 弧度
+        this.r = 220;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rot);
+
+        // 半透明主體 (上半圓)
+        ctx.beginPath();
+        ctx.arc(0, 0, this.r, Math.PI, Math.PI * 2);
+        ctx.lineTo(this.r, 0); ctx.lineTo(-this.r, 0);
+        ctx.fillStyle = 'rgba(135, 206, 250, 0.4)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(50, 50, 50, 0.8)';
+        ctx.lineWidth = 2; ctx.stroke();
+
+        // 內部鏤空線與中心十字
+        ctx.beginPath(); ctx.arc(0, 0, 30, Math.PI, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.moveTo(0, -15); ctx.lineTo(0, 15);
+        ctx.strokeStyle = '#E74C3C'; ctx.lineWidth = 2; ctx.stroke();
+
+        // 刻度與數字
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        for (let i = 0; i <= 180; i++) {
+            let angleRad = Math.PI + deg2rad(i); // 從左(PI)畫到右(2PI)
+            let isMajor = i % 10 === 0;
+            let tickLen = isMajor ? 20 : (i % 5 === 0 ? 12 : 6);
+            
+            let x1 = this.r * Math.cos(angleRad), y1 = this.r * Math.sin(angleRad);
+            let x2 = (this.r - tickLen) * Math.cos(angleRad), y2 = (this.r - tickLen) * Math.sin(angleRad);
+            
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+            ctx.strokeStyle = '#333'; ctx.lineWidth = isMajor ? 2 : 1; ctx.stroke();
+
+            if (isMajor) {
+                // 外圈數字 (180 -> 0)
+                ctx.save();
+                ctx.translate((this.r - 30) * Math.cos(angleRad), (this.r - 30) * Math.sin(angleRad));
+                ctx.rotate(angleRad + Math.PI/2);
+                ctx.fillStyle = '#2C3E50'; ctx.font = '12px Arial';
+                ctx.fillText((180 - i).toString(), 0, 0);
+                ctx.restore();
+
+                // 內圈數字 (0 -> 180)
+                ctx.save();
+                ctx.translate((this.r - 50) * Math.cos(angleRad), (this.r - 50) * Math.sin(angleRad));
+                ctx.rotate(angleRad + Math.PI/2);
+                ctx.fillStyle = '#C0392B'; ctx.font = '12px Arial';
+                ctx.fillText(i.toString(), 0, 0);
+                ctx.restore();
+            }
+        }
+
+        // 旋轉把手
+        ctx.beginPath(); ctx.arc(0, -this.r - 25, 15, 0, Math.PI * 2);
+        ctx.fillStyle = '#F39C12'; ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#FFF'; ctx.font = '16px Arial'; ctx.fillText('↻', 0, -this.r - 23);
+        ctx.restore();
+    }
+
+    hitTest(mx, my) {
+        // 1. 檢查旋轉把手 (需透過旋轉矩陣反推或正推)
+        // 修正：原本的 -this.r - 25 是負的，導致旋轉把手偵測位置與繪製位置顛倒
+        let hx = this.x + (this.r + 25) * Math.cos(this.rot - Math.PI/2);
+        let hy = this.y + (this.r + 25) * Math.sin(this.rot - Math.PI/2);
+        if (getDist({x: mx, y: my}, {x: hx, y: hy}) < 20) return 'handle';
+
+        // 2. 檢查量角器主體 (將滑鼠座標轉至量角器局部座標)
+        let dx = mx - this.x, dy = my - this.y;
+        let localX = dx * Math.cos(-this.rot) - dy * Math.sin(-this.rot);
+        let localY = dx * Math.sin(-this.rot) + dy * Math.cos(-this.rot);
+        
+        // 局部座標中，量角器在 y <= 0 的半圓內
+        if (localX*localX + localY*localY <= this.r*this.r && localY <= 0) return 'body';
+        
+        return null;
+    }
+}
+
+// 題目角 (Mode 1)
+class TargetAngle extends CanvasObject {
+    constructor() {
+        super();
+        this.x = 425; this.y = 350;
+        this.deg = Math.floor(Math.random() * 140) + 20;
+        this.rot = deg2rad(Math.floor(Math.random() * 60) - 30); // 基準線隨機旋轉
+        this.len = 250;
+        
+        // 防呆回饋狀態
+        this.showErrorArrow = false;
+        this.arrowFrom = {x:0, y:0};
+        this.showWrongSector = false;
+        this.wrongDeg = 0;
+    }
+
+    draw(ctx) {
+        let p1 = { x: this.x + this.len * Math.cos(this.rot), y: this.y + this.len * Math.sin(this.rot) };
+        let p2 = { x: this.x + this.len * Math.cos(this.rot - deg2rad(this.deg)), y: this.y + this.len * Math.sin(this.rot - deg2rad(this.deg)) };
+
+        // 畫邊
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(this.x, this.y); ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = '#2C3E50'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+        
+        // 畫頂點
+        ctx.beginPath(); ctx.arc(this.x, this.y, 6, 0, Math.PI*2); ctx.fillStyle = '#E74C3C'; ctx.fill();
+
+        // 防呆回饋：中心點偏移箭頭
+        if (this.showErrorArrow) {
+            ctx.beginPath(); ctx.setLineDash([8, 8]);
+            ctx.moveTo(this.arrowFrom.x, this.arrowFrom.y); ctx.lineTo(this.x, this.y);
+            ctx.strokeStyle = '#E74C3C'; ctx.lineWidth = 4; ctx.stroke(); ctx.setLineDash([]);
+            
+            let angle = Math.atan2(this.y - this.arrowFrom.y, this.x - this.arrowFrom.x);
+            ctx.beginPath(); ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.x - 15 * Math.cos(angle - Math.PI/6), this.y - 15 * Math.sin(angle - Math.PI/6));
+            ctx.lineTo(this.x - 15 * Math.cos(angle + Math.PI/6), this.y - 15 * Math.sin(angle + Math.PI/6));
+            ctx.fillStyle = '#E74C3C'; ctx.fill();
+        }
+
+        // 防呆回饋：看錯圈扇形
+        if (this.showWrongSector) {
+            let wrongRad = deg2rad(this.wrongDeg);
+            ctx.beginPath(); ctx.moveTo(this.x, this.y);
+            ctx.arc(this.x, this.y, 120, this.rot, this.rot - wrongRad, true);
+            ctx.fillStyle = 'rgba(231, 76, 60, 0.5)'; ctx.fill();
+            ctx.strokeStyle = '#C0392B'; ctx.lineWidth = 2; ctx.stroke();
+            
+            let midAngle = this.rot - wrongRad / 2;
+            ctx.fillStyle = '#C0392B'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(`你填的 ${this.wrongDeg}°`, this.x + 140 * Math.cos(midAngle), this.y + 140 * Math.sin(midAngle));
+        }
+    }
+}
+
+// 沙盒自由角 (Mode 2)
+class SandboxAngle extends CanvasObject {
+    constructor(deg, len, color) {
+        super();
+        this.x = 425 + (Math.random()*100 - 50); 
+        this.y = 275 + (Math.random()*100 - 50);
+        this.deg = deg;
+        this.len = len;
+        this.rot = deg2rad(Math.random() * 360); // 初始隨機旋轉
+        this.color = color;
+    }
+
+    getP1() { return { x: this.x + this.len * Math.cos(this.rot), y: this.y + this.len * Math.sin(this.rot) }; }
+    getP2() { return { x: this.x + this.len * Math.cos(this.rot - deg2rad(this.deg)), y: this.y + this.len * Math.sin(this.rot - deg2rad(this.deg)) }; }
+
+    draw(ctx) {
+        let p1 = this.getP1(), p2 = this.getP2();
+
+        // 畫半透明扇形區域
+        ctx.beginPath(); ctx.moveTo(this.x, this.y);
+        ctx.arc(this.x, this.y, this.len, this.rot, this.rot - deg2rad(this.deg), true);
+        ctx.fillStyle = this.color; ctx.fill();
+
+        // 畫邊
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(this.x, this.y); ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = this.color.replace('0.6', '1'); // 加深邊線
+        ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+
+        // 畫頂點 (拖曳控制點)
+        ctx.beginPath(); ctx.arc(this.x, this.y, 8, 0, Math.PI*2);
+        ctx.fillStyle = '#2C3E50'; ctx.fill(); ctx.strokeStyle = '#FFF'; ctx.lineWidth = 2; ctx.stroke();
+
+        // 畫旋轉控制點 (在 p1 端點)
+        ctx.beginPath(); ctx.arc(p1.x, p1.y, 10, 0, Math.PI*2);
+        ctx.fillStyle = '#F39C12'; ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#FFF'; ctx.font = '12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('↻', p1.x, p1.y);
+    }
+
+    hitTest(mx, my) {
+        let p1 = this.getP1(), p2 = this.getP2();
+        let m = {x: mx, y: my};
+
+        // 1. 檢查旋轉控制點
+        if (getDist(m, p1) < 15) return 'rotate_handle';
+        
+        // 2. 檢查頂點 (拖曳)
+        if (getDist(m, {x: this.x, y: this.y}) < 15) return 'vertex';
+
+        // 3. 檢查邊線 (拖曳)
+        if (distToSegment(m, {x: this.x, y: this.y}, p1) < 10) return 'body';
+        if (distToSegment(m, {x: this.x, y: this.y}, p2) < 10) return 'body';
+
+        // 4. 檢查扇形內部 (拖曳)
+        let distToV = getDist(m, {x: this.x, y: this.y});
+        if (distToV <= this.len) {
+            let angleToM = Math.atan2(my - this.y, mx - this.x);
+            // 角度正規化與範圍檢查
+            let start = this.rot;
+            let end = this.rot - deg2rad(this.deg);
+            // Canvas 逆時針為負，需轉換判斷
+            let a = (angleToM - end) % (Math.PI*2);
+            if (a < 0) a += Math.PI*2;
+            let span = (start - end) % (Math.PI*2);
+            if (span < 0) span += Math.PI*2;
+            if (a <= span) return 'body';
+        }
+        return null;
+    }
+}
+
+/**
+ * ==========================================
+ * 互動事件監聽 (滑鼠控制與 Z-index 管理)
+ * ==========================================
+ */
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    // 由上往下 (陣列尾部到頭部) 偵測碰撞，實現 Z-index
+    for (let i = renderObjects.length - 1; i >= 0; i--) {
+        let obj = renderObjects[i];
+        let hitPart = obj.hitTest(mx, my);
+        
+        if (hitPart) {
+            // 將點擊到的物件移到陣列最尾端 (Bring to front)
+            renderObjects.splice(i, 1);
+            renderObjects.push(obj);
+
+            activeDrag = {
+                obj: obj,
+                part: hitPart,
+                offsetX: mx - obj.x,
+                offsetY: my - obj.y
+            };
+            canvas.style.cursor = hitPart === 'rotate_handle' ? 'grabbing' : 'move';
+            return; // 只選取最上層的一個物件
+        }
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!activeDrag) {
+        // 游標懸停提示
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        let cursor = 'default';
+        for (let i = renderObjects.length - 1; i >= 0; i--) {
+            let hit = renderObjects[i].hitTest(mx, my);
+            if (hit === 'rotate_handle' || hit === 'handle') { cursor = 'grab'; break; }
+            if (hit) { cursor = 'move'; break; }
+        }
+        canvas.style.cursor = cursor;
+        return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const { obj, part, offsetX, offsetY } = activeDrag;
+
+    if (obj instanceof Protractor) {
+        if (part === 'body') {
+            obj.x = mx - offsetX; obj.y = my - offsetY;
+        } else if (part === 'handle') {
+            obj.rot = Math.atan2(my - obj.y, mx - obj.x) + Math.PI / 2;
+        }
+    } 
+    else if (obj instanceof SandboxAngle) {
+        if (part === 'body' || part === 'vertex') {
+            obj.x = mx - offsetX; obj.y = my - offsetY;
+        } else if (part === 'rotate_handle') {
+            obj.rot = Math.atan2(my - obj.y, mx - obj.x);
+        }
+    }
+    render();
+});
+
+canvas.addEventListener('mouseup', () => {
+    if (activeDrag && currentMode === 2 && activeDrag.obj instanceof SandboxAngle) {
+        checkOverlap(); // 模式二：放開滑鼠時檢查是否重疊
+    }
+    activeDrag = null;
+    canvas.style.cursor = 'default';
+});
+
+/**
+ * ==========================================
+ * 業務邏輯與防呆判斷
+ * ==========================================
+ */
+
+// 模式一：初始化
+let targetAngleObj, protractorObj;
+function initMode1() {
+    renderObjects = [];
+    targetAngleObj = new TargetAngle();
+    protractorObj = new Protractor(425, 120);
+    renderObjects.push(targetAngleObj, protractorObj);
+    document.getElementById('angleInput').value = '';
+    render();
+}
+
+// 模式一：防呆檢查
+function checkMeasurement() {
+    const inputVal = document.getElementById('angleInput').value;
+    if (!inputVal) return showToast("請輸入測量度數！", "error");
+    const inputDeg = parseInt(inputVal);
+    const actualDeg = targetAngleObj.deg;
+
+    // 1. 檢查中心點是否對齊
+    const dist = getDist(protractorObj, targetAngleObj);
+    if (dist > 20) {
+        targetAngleObj.showErrorArrow = true;
+        targetAngleObj.arrowFrom = { x: protractorObj.x, y: protractorObj.y };
+        targetAngleObj.showWrongSector = false;
+        showToast("⚠️ 中心點沒有對準角的頂點喔！\n請看畫面上的紅色箭頭引導。", "error");
+        render(); return;
+    }
+    targetAngleObj.showErrorArrow = false;
+
+    // 2. 檢查內外圈看錯陷阱
+    const wrongScaleDeg = 180 - actualDeg;
+    if (Math.abs(inputDeg - wrongScaleDeg) <= 5 && Math.abs(actualDeg - wrongScaleDeg) > 10) {
+        targetAngleObj.showWrongSector = true;
+        targetAngleObj.wrongDeg = inputDeg;
+        showToast(`🤔 你填了 ${inputDeg} 度，但原本的角有這麼小(或大)嗎？\n請再檢查一次量角器的內外圈！`, "error");
+        render(); return;
+    }
+    targetAngleObj.showWrongSector = false;
+
+    // 3. 一般誤差檢查
+    if (Math.abs(inputDeg - actualDeg) <= 3) {
+        showToast(`🎉 恭喜答對！這個角確實是 ${actualDeg} 度。`, "success");
+    } else {
+        showToast("❌ 角度不太對喔，請確認 0度基準線 是否有對齊邊線。", "error");
+    }
+    render();
+}
+
+// 模式二：生成角物件
+function spawnAngle(deg, len, color) {
+    renderObjects.push(new SandboxAngle(deg, len, color));
+    render();
+}
+
+// 模式二：清空沙盒
+function clearSandbox() {
+    renderObjects = [];
+    render();
+}
+
+// 模式二：重疊偵測邏輯 (概念素養層核心)
+let lastOverlapTime = 0;
+function checkOverlap() {
+    // 兩兩比對沙盒中的角
+    for (let i = 0; i < renderObjects.length; i++) {
+        for (let j = i + 1; j < renderObjects.length; j++) {
+            let A = renderObjects[i];
+            let B = renderObjects[j];
+
+            // 1. 頂點是否重疊 (距離 < 15px)
+            if (getDist(A, B) < 15) {
+                // 2. 角度是否相同
+                if (A.deg === B.deg) {
+                    // 3. 邊線是否重疊 (旋轉角度差異 < 5度)
+                    // 正規化角度到 0~360
+                    let rotA = (rad2deg(A.rot) % 360 + 360) % 360;
+                    let rotB = (rad2deg(B.rot) % 360 + 360) % 360;
+                    let diff = Math.abs(rotA - rotB);
+                    if (diff > 180) diff = 360 - diff; // 處理 359度 與 1度 的差異
+
+                    if (diff < 5) {
+                        let now = Date.now();
+                        if (now - lastOverlapTime > 3000) { // 避免連續觸發
+                            showToast("✨ 你看！兩條邊長度不同，\n但頂點對頂點重疊時，它們張開的角度還是一模一樣喔！\n這證明了「角度大小與邊長無關」！", "success");
+                            lastOverlapTime = now;
+                        }
+                        // 自動吸附完美重疊
+                        A.x = B.x; A.y = B.y; A.rot = B.rot;
+                        render();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * ==========================================
+ * 系統初始化與渲染迴圈
+ * ==========================================
+ */
+
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 繪製格線背景 (增添實驗室氛圍)
+    ctx.strokeStyle = '#E0E6ED'; ctx.lineWidth = 1;
+    for(let i=0; i<canvas.width; i+=50) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
+    for(let i=0; i<canvas.height; i+=50) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
+
+    // 依序繪製所有物件 (Z-index)
+    renderObjects.forEach(obj => obj.draw(ctx));
+}
+
+function switchMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+        btn.classList.toggle('active', idx + 1 === mode);
+    });
+    
+    const mainLayout = document.getElementById('main-layout');
+    if (mode === 1) {
+        mainLayout.classList.add('mode-1');
+        document.getElementById('panel-mode1').classList.remove('hidden');
+        document.getElementById('panel-mode2').classList.add('hidden');
+        initMode1();
+    } else {
+        mainLayout.classList.remove('mode-1');
+        document.getElementById('panel-mode1').classList.add('hidden');
+        document.getElementById('panel-mode2').classList.remove('hidden');
+        clearSandbox();
+    }
+}
+
+// 提示訊息 UI
+let toastTimeout;
+function showToast(msg, type = "success") {
+    const toast = document.getElementById('toast');
+    toast.innerText = msg;
+    toast.className = `toast show ${type}`;
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 5000);
+}
+
+// 啟動程式
+initMode1();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>飲料調配實驗室 (Proportion Lab)</title>
+  <style>
+    :root {
+      --primary: #4a90e2;
+      --secondary: #f39c12;
+      --bg-color: #f4f7f6;
+      --panel-bg: #ffffff;
+      --text-color: #333333;
+      --border-radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Comic Sans MS', 'Chalkboard SE', '微軟正黑體', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background-color: var(--primary);
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 10;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    #mode-tabs {
+      display: flex;
+      gap: 10px;
+    }
+
+    .tab-btn {
+      background-color: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.3s;
+    }
+
+    .tab-btn.active, .tab-btn:hover {
+      background-color: white;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      padding: 20px;
+      gap: 20px;
+    }
+
+    section {
+      background: var(--panel-bg);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 {
+      margin-top: 0;
+      border-bottom: 2px dashed #ccc;
+      padding-bottom: 10px;
+      text-align: center;
+      color: #555;
+    }
+
+    /* Left Panel */
+    #ingredients {
+      flex: 1;
+      max-width: 250px;
+    }
+
+    .ingredient-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .ing-btn {
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 15px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.1s, box-shadow 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .ing-btn:active {
+      transform: scale(0.95);
+    }
+
+    .ing-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .water-btn {
+      background-color: #e0f7fa;
+      color: #00838f;
+      box-shadow: 0 4px 0 #b2ebf2;
+    }
+    .water-btn:active { box-shadow: 0 0 0 #b2ebf2; transform: translateY(4px); }
+
+    .juice-btn {
+      background-color: #fff3e0;
+      color: #e65100;
+      box-shadow: 0 4px 0 #ffe0b2;
+    }
+    .juice-btn:active { box-shadow: 0 0 0 #ffe0b2; transform: translateY(4px); }
+
+    .cup-selector {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: var(--border-radius);
+      margin-bottom: 20px;
+    }
+
+    .cup-selector label {
+      display: block;
+      margin: 5px 0;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .reset-btn {
+      margin-top: auto;
+      background: #ffebee;
+      color: #c62828;
+      border: 2px solid #ffcdd2;
+      padding: 10px;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    /* Middle Panel */
+    #mixing {
+      flex: 2;
+      align-items: center;
+      position: relative;
+    }
+
+    .task-prompt {
+      background: #fff9c4;
+      padding: 15px 20px;
+      border-radius: 20px;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      border: 2px solid #fbc02d;
+      text-align: center;
+      width: 100%;
+    }
+
+    .cups-container {
+      display: flex;
+      gap: 50px;
+      justify-content: center;
+      align-items: flex-end;
+      flex: 1;
+      padding-bottom: 20px;
+    }
+
+    .cup-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cup {
+      width: 120px;
+      height: 200px;
+      border: 4px solid rgba(255, 255, 255, 0.8);
+      border-top: none;
+      border-radius: 0 0 20px 20px;
+      position: relative;
+      background: rgba(240, 240, 240, 0.3);
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    /* Glass reflection */
+    .cup::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 10px;
+      width: 20px;
+      height: 90%;
+      background: linear-gradient(to right, rgba(255,255,255,0.8), rgba(255,255,255,0));
+      border-radius: 10px;
+      pointer-events: none;
+    }
+
+    .liquid {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background-color: transparent;
+      transition: height 0.5s ease-in-out, background-color 0.5s ease-in-out;
+    }
+
+    .cup-label {
+      font-size: 1.2rem;
+      font-weight: bold;
+      background: #eee;
+      padding: 5px 15px;
+      border-radius: 15px;
+    }
+
+    .feedback {
+      min-height: 40px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #2e7d32;
+      text-align: center;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      transition: all 0.3s;
+    }
+    
+    .feedback.show {
+      background: #e8f5e9;
+      animation: pop 0.3s ease-out;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    #mode2-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    #mode2-actions button {
+      padding: 10px 20px;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 10px;
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+    }
+    
+    #mode2-actions button:hover {
+      background: #357abd;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Right Panel */
+    #dashboard {
+      flex: 1;
+      max-width: 300px;
+    }
+
+    #toggle-numbers {
+      background: #673ab7;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      cursor: pointer;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+
+    .dash-cup {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: var(--border-radius);
+      margin-bottom: 15px;
+    }
+
+    .dash-cup h3 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: #444;
+    }
+
+    .bar-chart {
+      height: 30px;
+      background: #e0e0e0;
+      border-radius: 15px;
+      display: flex;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .bar-water {
+      height: 100%;
+      background: #4fc3f7;
+      width: 0%;
+      transition: width 0.5s ease-in-out;
+    }
+
+    .bar-juice {
+      height: 100%;
+      background: #ff9800;
+      width: 0%;
+      transition: width 0.5s ease-in-out;
+    }
+
+    .numbers {
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .numbers.hidden-num {
+      visibility: hidden;
+    }
+
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🧪 飲料調配實驗室</h1>
+    <nav id="mode-tabs">
+      <button data-mode="1" class="tab-btn active">模式一：目標調配</button>
+      <button data-mode="2" class="tab-btn">模式二：等值比判斷</button>
+      <button data-mode="3" class="tab-btn">模式三：自由比較</button>
+    </nav>
+  </header>
+  
+  <main>
+    <!-- 左側：材料區 -->
+    <section id="ingredients">
+      <h2>材料區</h2>
+      <div class="ingredient-btns">
+        <button id="btn-water" class="ing-btn water-btn">💧 加水<br>(1 單位)</button>
+        <button id="btn-juice" class="ing-btn juice-btn">🍊 加果汁<br>(1 單位)</button>
+      </div>
+      <div class="cup-selector" id="cup-selector-div">
+        <p>目前操作：</p>
+        <label><input type="radio" name="target-cup" value="A" checked> 杯 A</label>
+        <label><input type="radio" name="target-cup" value="B"> 杯 B</label>
+      </div>
+      <button id="btn-reset" class="reset-btn">🗑️ 清空杯子</button>
+    </section>
+
+    <!-- 中間：調配區 -->
+    <section id="mixing">
+      <h2>調配區</h2>
+      <div id="task-prompt" class="task-prompt">請在杯 A 調出 水：果汁 = 2：3 的飲料。</div>
+      
+      <div class="cups-container">
+        <div class="cup-wrapper">
+          <div class="cup" id="cup-A-container">
+            <div class="liquid" id="liquid-A"></div>
+          </div>
+          <div class="cup-label">杯 A</div>
+        </div>
+        
+        <div class="cup-wrapper">
+          <div class="cup" id="cup-B-container">
+            <div class="liquid" id="liquid-B"></div>
+          </div>
+          <div class="cup-label">杯 B</div>
+        </div>
+      </div>
+      
+      <!-- 模式二的互動按鈕 -->
+      <div id="mode2-actions" class="hidden">
+        <button id="ans-A">杯 A 比較濃</button>
+        <button id="ans-same">一樣濃</button>
+        <button id="ans-B">杯 B 比較濃</button>
+      </div>
+      <div id="feedback-msg" class="feedback"></div>
+    </section>
+
+    <!-- 右側：結果顯示面板 -->
+    <section id="dashboard">
+      <h2>結果顯示面板</h2>
+      <button id="toggle-numbers">👁️ 顯示數字</button>
+      
+      <div class="dash-cup" id="dash-A">
+        <h3>杯 A 比例</h3>
+        <div class="bar-chart">
+          <div class="bar-water" id="bar-water-A"></div>
+          <div class="bar-juice" id="bar-juice-A"></div>
+        </div>
+        <div class="numbers hidden-num" id="num-A">水: 0 | 果汁: 0</div>
+      </div>
+      
+      <div class="dash-cup" id="dash-B">
+        <h3>杯 B 比例</h3>
+        <div class="bar-chart">
+          <div class="bar-water" id="bar-water-B"></div>
+          <div class="bar-juice" id="bar-juice-B"></div>
+        </div>
+        <div class="numbers hidden-num" id="num-B">水: 0 | 果汁: 0</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /**
+     * 飲料調配實驗室 - 核心邏輯
+     */
+
+    // --- 狀態管理 ---
+    const state = {
+      mode: 1, // 1: 目標調配, 2: 等值比判斷, 3: 自由比較
+      showNumbers: false,
+      cups: {
+        A: { water: 0, juice: 0 },
+        B: { water: 0, juice: 0 }
+      },
+      maxCapacity: 20 // 每個杯子最大容量(單位)
+    };
+
+    // --- DOM 元素 ---
+    const els = {
+      tabs: document.querySelectorAll('.tab-btn'),
+      btnWater: document.getElementById('btn-water'),
+      btnJuice: document.getElementById('btn-juice'),
+      btnReset: document.getElementById('btn-reset'),
+      radios: document.getElementsByName('target-cup'),
+      cupSelectorDiv: document.getElementById('cup-selector-div'),
+      taskPrompt: document.getElementById('task-prompt'),
+      liquidA: document.getElementById('liquid-A'),
+      liquidB: document.getElementById('liquid-B'),
+      mode2Actions: document.getElementById('mode2-actions'),
+      feedbackMsg: document.getElementById('feedback-msg'),
+      toggleNumbers: document.getElementById('toggle-numbers'),
+      barWaterA: document.getElementById('bar-water-A'),
+      barJuiceA: document.getElementById('bar-juice-A'),
+      barWaterB: document.getElementById('bar-water-B'),
+      barJuiceB: document.getElementById('bar-juice-B'),
+      numA: document.getElementById('num-A'),
+      numB: document.getElementById('num-B'),
+      ansA: document.getElementById('ans-A'),
+      ansSame: document.getElementById('ans-same'),
+      ansB: document.getElementById('ans-B')
+    };
+
+    // --- 初始化與事件綁定 ---
+    function init() {
+      // 綁定頁籤切換
+      els.tabs.forEach(tab => {
+        tab.addEventListener('click', (e) => setMode(parseInt(e.target.dataset.mode)));
+      });
+
+      // 綁定加料按鈕
+      els.btnWater.addEventListener('click', () => addIngredient('water'));
+      els.btnJuice.addEventListener('click', () => addIngredient('juice'));
+      els.btnReset.addEventListener('click', resetCups);
+
+      // 綁定顯示數字開關
+      els.toggleNumbers.addEventListener('click', toggleNumbers);
+
+      // 綁定模式二作答按鈕
+      els.ansA.addEventListener('click', () => checkAnswer('A'));
+      els.ansSame.addEventListener('click', () => checkAnswer('same'));
+      els.ansB.addEventListener('click', () => checkAnswer('B'));
+
+      // 初始渲染
+      setMode(1);
+    }
+
+    // --- 核心邏輯 ---
+
+    // 取得目前選擇的杯子 (A 或 B)
+    function getSelectedCup() {
+      for (const radio of els.radios) {
+        if (radio.checked) return radio.value;
+      }
+      return 'A';
+    }
+
+    // 加入材料
+    function addIngredient(type) {
+      const cupId = getSelectedCup();
+      const cup = state.cups[cupId];
+      const total = cup.water + cup.juice;
+
+      if (total < state.maxCapacity) {
+        cup[type]++;
+        updateUI();
+        checkModeLogic();
+      } else {
+        showFeedback('杯子已經滿了！', false);
+      }
+    }
+
+    // 清空杯子
+    function resetCups() {
+      state.cups.A = { water: 0, juice: 0 };
+      state.cups.B = { water: 0, juice: 0 };
+      hideFeedback();
+      updateUI();
+    }
+
+    // 切換顯示數字
+    function toggleNumbers() {
+      state.showNumbers = !state.showNumbers;
+      els.toggleNumbers.textContent = state.showNumbers ? '🙈 隱藏數字' : '👁️ 顯示數字';
+      
+      if (state.showNumbers) {
+        els.numA.classList.remove('hidden-num');
+        els.numB.classList.remove('hidden-num');
+      } else {
+        els.numA.classList.add('hidden-num');
+        els.numB.classList.add('hidden-num');
+      }
+    }
+
+    // 切換模式
+    function setMode(mode) {
+      state.mode = mode;
+      
+      // 更新頁籤樣式
+      els.tabs.forEach(tab => {
+        if (parseInt(tab.dataset.mode) === mode) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+
+      // 重置狀態
+      resetCups();
+      els.mode2Actions.classList.add('hidden');
+      els.btnWater.disabled = false;
+      els.btnJuice.disabled = false;
+      els.cupSelectorDiv.style.display = 'block';
+
+      // 根據模式設定初始畫面
+      switch (mode) {
+        case 1:
+          els.taskPrompt.innerHTML = '🎯 任務：請在 <strong>杯 A</strong> 調出 <strong>水：果汁 = 2：3</strong> 的飲料。';
+          // 強制選擇杯 A
+          els.radios[0].checked = true;
+          break;
+        case 2:
+          els.taskPrompt.innerHTML = '🤔 任務：系統已自動調配兩杯飲料，請觀察顏色並判斷哪一杯比較濃？還是一樣濃？';
+          els.mode2Actions.classList.remove('hidden');
+          els.btnWater.disabled = true;
+          els.btnJuice.disabled = true;
+          els.cupSelectorDiv.style.display = 'none';
+          
+          // 自動注入等值比液體
+          state.cups.A = { water: 2, juice: 3 };
+          state.cups.B = { water: 4, juice: 6 };
+          updateUI();
+          break;
+        case 3:
+          els.taskPrompt.innerHTML = '🧪 自由模式：請自由在兩個杯子中加入材料，系統會自動比較濃度！';
+          break;
+      }
+    }
+
+    // --- 視覺與演算法 ---
+
+    /**
+     * 濃度顏色動態計算演算法
+     * 根據果汁佔總容量的比例，映射到 rgba 顏色。
+     * 水: rgba(135, 206, 235, 0.5) (淺藍色)
+     * 果汁: rgba(255, 140, 0, 0.9) (橘紅色)
+     */
+    function calculateColor(water, juice) {
+      const total = water + juice;
+      if (total === 0) return 'transparent';
+
+      const ratio = juice / total; // 果汁比例 (0 ~ 1)
+
+      // 顏色插值計算 (線性映射)
+      const r = Math.round(135 + (255 - 135) * ratio);
+      const g = Math.round(206 + (140 - 206) * ratio);
+      const b = Math.round(235 + (0 - 235) * ratio);
+      const a = 0.5 + (0.9 - 0.5) * ratio;
+
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    }
+
+    // 更新畫面 UI
+    function updateUI() {
+      ['A', 'B'].forEach(cupId => {
+        const cup = state.cups[cupId];
+        const total = cup.water + cup.juice;
+        
+        // 1. 更新液體高度與顏色
+        const heightPercent = Math.min((total / state.maxCapacity) * 100, 100);
+        const liquidEl = cupId === 'A' ? els.liquidA : els.liquidB;
+        liquidEl.style.height = `${heightPercent}%`;
+        liquidEl.style.backgroundColor = calculateColor(cup.water, cup.juice);
+
+        // 2. 更新儀表板比例條
+        const waterPercent = total === 0 ? 0 : (cup.water / total) * 100;
+        const juicePercent = total === 0 ? 0 : (cup.juice / total) * 100;
+        
+        const barWater = cupId === 'A' ? els.barWaterA : els.barWaterB;
+        const barJuice = cupId === 'A' ? els.barJuiceA : els.barJuiceB;
+        
+        barWater.style.width = `${waterPercent}%`;
+        barJuice.style.width = `${juicePercent}%`;
+
+        // 3. 更新數字文字
+        const numEl = cupId === 'A' ? els.numA : els.numB;
+        numEl.textContent = `水: ${cup.water} | 果汁: ${cup.juice}`;
+      });
+    }
+
+    // --- 任務邏輯驗證 ---
+
+    function checkModeLogic() {
+      if (state.mode === 1) {
+        // 模式一：目標調配 (水:果汁 = 2:3)
+        const cupA = state.cups.A;
+        if (cupA.water > 0 && cupA.juice > 0) {
+          // 等值比驗證邏輯：交叉相乘 (water * 3 === juice * 2)
+          if (cupA.water * 3 === cupA.juice * 2) {
+            showFeedback('🎉 恭喜！成功調出 水：果汁 = 2：3 的目標濃度！', true);
+          } else {
+            hideFeedback();
+          }
+        } else {
+          hideFeedback();
+        }
+      } else if (state.mode === 3) {
+        // 模式三：自由比較
+        const cupA = state.cups.A;
+        const cupB = state.cups.B;
+        const totalA = cupA.water + cupA.juice;
+        const totalB = cupB.water + cupB.juice;
+
+        if (totalA > 0 && totalB > 0) {
+          const ratioA = cupA.juice / totalA;
+          const ratioB = cupB.juice / totalB;
+
+          // 浮點數比較容差
+          const epsilon = 0.0001;
+          if (Math.abs(ratioA - ratioB) < epsilon) {
+            showFeedback('⚖️ 兩杯飲料【一樣濃】！(等值比)', true);
+          } else if (ratioA > ratioB) {
+            showFeedback('🍊 【杯 A】比較濃！', true);
+          } else {
+            showFeedback('🍊 【杯 B】比較濃！', true);
+          }
+        } else {
+          hideFeedback();
+        }
+      }
+    }
+
+    // 模式二作答驗證
+    function checkAnswer(ans) {
+      if (ans === 'same') {
+        showFeedback('✨ 答對了！因為 2:3 = 4:6，濃度相同，這就是「等值比」！', true);
+      } else {
+        showFeedback('❌ 答錯了，請再仔細觀察顏色深淺，或者打開數字算算看比例喔！', false);
+      }
+    }
+
+    // --- 顯示回饋訊息 ---
+    function showFeedback(msg, isSuccess) {
+      els.feedbackMsg.textContent = msg;
+      els.feedbackMsg.style.color = isSuccess ? '#2e7d32' : '#c62828';
+      els.feedbackMsg.style.backgroundColor = isSuccess ? '#e8f5e9' : '#ffebee';
+      els.feedbackMsg.classList.add('show');
+    }
+
+    function hideFeedback() {
+      els.feedbackMsg.classList.remove('show');
+      els.feedbackMsg.textContent = '';
+    }
+
+    // 啟動程式
+    init();
+
+  </script>
+</body>
+</html>

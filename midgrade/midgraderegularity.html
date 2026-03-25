@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>規律實驗室 (Pattern Lab)</title>
+<style>
+  /* CSS Variables for theming */
+  :root {
+    --primary: #4F46E5;
+    --primary-hover: #4338CA;
+    --bg: #F3F4F6;
+    --surface: #FFFFFF;
+    --text-main: #1F2937;
+    --text-muted: #6B7280;
+    --border: #E5E7EB;
+    --success: #10B981;
+    --error: #EF4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+  body { background-color: var(--bg); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* Header & Navigation */
+  header { background-color: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+  h1 { font-size: 1.5rem; color: var(--primary); }
+  nav { display: flex; gap: 1rem; flex-wrap: wrap; }
+  nav button { background: none; border: none; padding: 0.5rem 1rem; cursor: pointer; font-size: 1rem; color: var(--text-muted); border-radius: 0.375rem; transition: all 0.2s; font-weight: 500; }
+  nav button:hover { background-color: var(--bg); color: var(--text-main); }
+  nav button.active { background-color: var(--primary); color: white; }
+
+  /* Main Content */
+  main { flex: 1; padding: 2rem; max-width: 1000px; margin: 0 auto; width: 100%; }
+  .mode-section { display: none; background: var(--surface); padding: 2rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+  .mode-section.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  h2 { margin-bottom: 1rem; color: var(--text-main); font-size: 1.5rem; }
+  p.desc { color: var(--text-muted); margin-bottom: 2rem; }
+
+  /* Pattern Display */
+  .pattern-display { display: flex; justify-content: center; gap: 1rem; font-size: 3rem; margin-bottom: 2rem; flex-wrap: wrap; min-height: 4rem; align-items: center; }
+  .pattern-item { display: inline-flex; justify-content: center; align-items: center; width: 4.5rem; height: 4.5rem; background: var(--bg); border-radius: 0.5rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+  .pattern-item.question { background: #FEF3C7; border: 2px dashed #F59E0B; color: #F59E0B; box-shadow: none; }
+  .pattern-item.dropzone { background: #E0E7FF; border: 2px dashed var(--primary); min-width: 4.5rem; box-shadow: none; }
+  
+  /* Options */
+  .options { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+  .option-btn { font-size: 2rem; padding: 1rem 2rem; background: var(--surface); border: 2px solid var(--border); border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  .option-btn:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+  .option-btn:active { transform: translateY(0); }
+
+  /* Feedback */
+  .feedback { margin-top: 1.5rem; font-size: 1.25rem; font-weight: bold; min-height: 2rem; }
+  .feedback.success { color: var(--success); }
+  .feedback.error { color: var(--error); }
+  .feedback-rule { color: var(--primary); font-size: 1.1rem; margin-top: 0.5rem; display: none; font-weight: 500; }
+
+  /* Next Button */
+  .next-btn { margin-top: 2rem; padding: 0.75rem 2rem; font-size: 1.1rem; background: var(--primary); color: white; border: none; border-radius: 0.5rem; cursor: pointer; display: none; transition: background 0.2s; font-weight: 600; }
+  .next-btn:hover { background: var(--primary-hover); }
+
+  /* Sandbox */
+  .sandbox-area { min-height: 120px; border: 2px dashed var(--border); border-radius: 0.5rem; padding: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; align-items: center; background: #F9FAFB; }
+  .draggable { cursor: grab; user-select: none; transition: transform 0.1s; }
+  .draggable:active { cursor: grabbing; transform: scale(1.1); }
+  .sandbox-palette { display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem; padding: 1rem; background: var(--bg); border-radius: 0.5rem; flex-wrap: wrap; }
+  .sandbox-result { font-size: 1.5rem; font-weight: bold; color: var(--primary); margin-top: 1rem; min-height: 2.5rem; }
+  .clear-btn { padding: 0.5rem 1rem; background: var(--error); color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-weight: 500; transition: opacity 0.2s; }
+  .clear-btn:hover { opacity: 0.9; }
+
+  /* Geometric */
+  .geo-blocks { display: flex; gap: 0.25rem; flex-wrap: wrap; max-width: 100px; justify-content: center; }
+  .geo-block { width: 16px; height: 16px; background-color: var(--primary); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔬 規律實驗室 Pattern Lab</h1>
+  <nav id="nav-menu">
+    <button data-target="mode-visual" class="active">視覺圖形</button>
+    <button data-target="mode-numerical">數學數值</button>
+    <button data-target="mode-geometric">幾何成長</button>
+    <button data-target="mode-dragdrop">拖曳補齊</button>
+    <button data-target="mode-sandbox">創造沙盒</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 1. 視覺圖形規律 -->
+  <section id="mode-visual" class="mode-section active">
+    <h2>視覺圖形規律</h2>
+    <p class="desc">觀察圖形的排列方式，選出下一個應該是什麼圖形？</p>
+    <div class="pattern-display" id="visual-display"></div>
+    <div class="options" id="visual-options"></div>
+    <div class="feedback" id="visual-feedback"></div>
+    <button class="next-btn" id="visual-next">下一題</button>
+  </section>
+
+  <!-- 2. 數學數值規律 -->
+  <section id="mode-numerical" class="mode-section">
+    <h2>數學數值規律</h2>
+    <p class="desc">找出數字之間的變化規律，選出下一個數字。</p>
+    <div class="pattern-display" id="numerical-display"></div>
+    <div class="options" id="numerical-options"></div>
+    <div class="feedback" id="numerical-feedback"></div>
+    <div class="feedback-rule" id="numerical-rule"></div>
+    <button class="next-btn" id="numerical-next">下一題</button>
+  </section>
+
+  <!-- 3. 幾何成長規律 -->
+  <section id="mode-geometric" class="mode-section">
+    <h2>幾何成長規律</h2>
+    <p class="desc">觀察方塊數量的成長，下一個階段會有幾個方塊？</p>
+    <div class="pattern-display" id="geometric-display"></div>
+    <div class="options" id="geometric-options"></div>
+    <div class="feedback" id="geometric-feedback"></div>
+    <button class="next-btn" id="geometric-next">下一題</button>
+  </section>
+
+  <!-- 4. 拖曳補齊規律 -->
+  <section id="mode-dragdrop" class="mode-section">
+    <h2>拖曳補齊規律</h2>
+    <p class="desc">將正確的圖形拖曳到空格中，完成這串規律。</p>
+    <div class="pattern-display" id="dragdrop-display"></div>
+    <div class="sandbox-palette" id="dragdrop-palette"></div>
+    <div class="feedback" id="dragdrop-feedback"></div>
+    <button class="next-btn" id="dragdrop-next">下一題</button>
+  </section>
+
+  <!-- 5. 創造規律沙盒 -->
+  <section id="mode-sandbox" class="mode-section">
+    <h2>創造規律沙盒</h2>
+    <p class="desc">自由拖曳圖形到排列區，放置超過 4 個圖形後，系統會自動分析你的規律！點擊排列區的圖形可將其移除。</p>
+    <div class="sandbox-palette" id="sandbox-palette"></div>
+    <div class="sandbox-area" id="sandbox-area"></div>
+    <button class="clear-btn" id="sandbox-clear">清空排列區</button>
+    <div class="sandbox-result" id="sandbox-result">尚未形成固定規律</div>
+  </section>
+</main>
+
+<script>
+/**
+ * 規律生成引擎 (Pattern Engine)
+ * 負責生成各種題型與驗證邏輯
+ */
+const PatternEngine = {
+  emojis: ['🔴', '🔵', '🟢', '🟡', '🔺', '🔷', '⭐', '🌙', '🌸', '🍎'],
+  
+  // 隨機整數 [min, max]
+  randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  },
+
+  // 隨機打亂陣列
+  shuffle(array) {
+    return array.sort(() => Math.random() - 0.5);
+  },
+
+  // 1. 生成視覺圖形規律
+  generateVisualPattern() {
+    const types = ['AB', 'AAB', 'ABB', 'ABC'];
+    const type = types[this.randomInt(0, types.length - 1)];
+    const selectedEmojis = this.shuffle([...this.emojis]).slice(0, 3);
+    const A = selectedEmojis[0], B = selectedEmojis[1], C = selectedEmojis[2];
+    
+    let unit = [];
+    if (type === 'AB') unit = [A, B];
+    else if (type === 'AAB') unit = [A, A, B];
+    else if (type === 'ABB') unit = [A, B, B];
+    else if (type === 'ABC') unit = [A, B, C];
+
+    // 重複規律產生序列
+    let sequence = [];
+    while (sequence.length < 6) {
+      sequence.push(...unit);
+    }
+    sequence = sequence.slice(0, 6); // 取前6個
+    const answer = unit[6 % unit.length]; // 第7個是答案
+
+    // 產生選項
+    let options = [answer];
+    while (options.length < 4) {
+      const randomEmoji = this.emojis[this.randomInt(0, this.emojis.length - 1)];
+      if (!options.includes(randomEmoji)) options.push(randomEmoji);
+    }
+    
+    return { sequence, answer, options: this.shuffle(options) };
+  },
+
+  // 2. 生成數學數值規律
+  generateNumericalPattern() {
+    const isArithmetic = Math.random() > 0.3; // 70% 等差, 30% 等比
+    let sequence = [];
+    let answer = 0;
+    let ruleText = '';
+
+    if (isArithmetic) {
+      const diff = this.randomInt(2, 10);
+      const start = this.randomInt(1, 20);
+      for (let i = 0; i < 5; i++) sequence.push(start + i * diff);
+      answer = start + 5 * diff;
+      ruleText = `規律：每次 +${diff}`;
+    } else {
+      const ratio = this.randomInt(2, 3);
+      const start = this.randomInt(1, 5);
+      for (let i = 0; i < 4; i++) sequence.push(start * Math.pow(ratio, i));
+      answer = start * Math.pow(ratio, 4);
+      ruleText = `規律：每次 ×${ratio}`;
+    }
+
+    let options = [answer];
+    while (options.length < 4) {
+      const wrongAnswer = answer + this.randomInt(-10, 10);
+      if (wrongAnswer > 0 && !options.includes(wrongAnswer)) options.push(wrongAnswer);
+    }
+
+    return { sequence, answer, ruleText, options: this.shuffle(options) };
+  },
+
+  // 3. 生成幾何成長規律
+  generateGeometricPattern() {
+    const diff = this.randomInt(1, 3);
+    const start = this.randomInt(1, 3);
+    let sequence = [];
+    for (let i = 0; i < 3; i++) sequence.push(start + i * diff);
+    const answer = start + 3 * diff;
+
+    let options = [answer];
+    while (options.length < 4) {
+      const wrongAnswer = answer + this.randomInt(-3, 3);
+      if (wrongAnswer > 0 && !options.includes(wrongAnswer)) options.push(wrongAnswer);
+    }
+
+    return { sequence, answer, options: this.shuffle(options) };
+  },
+
+  // 4. 生成拖曳補齊規律
+  generateDragDropPattern() {
+    const { sequence, answer } = this.generateVisualPattern();
+    // 隨機挖空一個位置 (不要是第一個或最後一個，增加趣味性)
+    const emptyIndex = this.randomInt(1, sequence.length - 2);
+    const missingItem = sequence[emptyIndex];
+    sequence[emptyIndex] = '?';
+
+    let palette = [missingItem];
+    while (palette.length < 4) {
+      const randomEmoji = this.emojis[this.randomInt(0, this.emojis.length - 1)];
+      if (!palette.includes(randomEmoji)) palette.push(randomEmoji);
+    }
+
+    return { sequence, missingItem, emptyIndex, palette: this.shuffle(palette) };
+  },
+
+  /**
+   * 系統解析引擎 (模式偵測演算法)
+   * 將輸入陣列轉換為 A, B, C... 的抽象模式，並尋找最短重複單元。
+   * @param {Array} sequence - 學生排列的圖形陣列
+   * @returns {String} 偵測到的模式字串 (如 "ABAB") 或 null
+   */
+  analyzePattern(sequence) {
+    if (sequence.length < 4) return null;
+
+    // 1. 抽象化：將圖形映射為 A, B, C...
+    const map = new Map();
+    let charCode = 65; // 'A'
+    let abstractSeq = '';
+    
+    for (const item of sequence) {
+      if (!map.has(item)) {
+        map.set(item, String.fromCharCode(charCode++));
+      }
+      abstractSeq += map.get(item);
+    }
+
+    // 2. 尋找最短重複單元 (長度從 1 到 sequence.length / 2)
+    const maxUnitLen = Math.floor(abstractSeq.length / 2);
+    
+    for (let len = 1; len <= maxUnitLen; len++) {
+      const unit = abstractSeq.substring(0, len);
+      let isPattern = true;
+
+      // 檢查整個序列是否由該單元重複構成 (允許最後一個單元不完整)
+      for (let i = 0; i < abstractSeq.length; i++) {
+        if (abstractSeq[i] !== unit[i % len]) {
+          isPattern = false;
+          break;
+        }
+      }
+
+      // 確保至少完整重複兩次
+      if (isPattern && abstractSeq.length >= len * 2) {
+        return unit; // 回傳找到的最短模式
+      }
+    }
+
+    return null; // 找不到規律
+  }
+};
+
+/**
+ * UI 控制器
+ */
+const App = {
+  init() {
+    this.bindNav();
+    this.initVisualMode();
+    this.initNumericalMode();
+    this.initGeometricMode();
+    this.initDragDropMode();
+    this.initSandboxMode();
+  },
+
+  bindNav() {
+    const buttons = document.querySelectorAll('#nav-menu button');
+    const sections = document.querySelectorAll('.mode-section');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.remove('active'));
+        sections.forEach(s => s.classList.remove('active'));
+        
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.target).classList.add('active');
+      });
+    });
+  },
+
+  // --- 1. 視覺圖形規律 ---
+  initVisualMode() {
+    const display = document.getElementById('visual-display');
+    const optionsContainer = document.getElementById('visual-options');
+    const feedback = document.getElementById('visual-feedback');
+    const nextBtn = document.getElementById('visual-next');
+
+    const loadQuestion = () => {
+      feedback.textContent = '';
+      nextBtn.style.display = 'none';
+      const { sequence, answer, options } = PatternEngine.generateVisualPattern();
+      
+      display.innerHTML = sequence.map(item => `<div class="pattern-item">${item}</div>`).join('') + 
+                          `<div class="pattern-item question">?</div>`;
+      
+      optionsContainer.innerHTML = '';
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = opt;
+        btn.onclick = () => {
+          if (opt === answer) {
+            feedback.textContent = '🎉 答對了！';
+            feedback.className = 'feedback success';
+            nextBtn.style.display = 'inline-block';
+            // 替換問號為正確答案
+            display.lastElementChild.textContent = answer;
+            display.lastElementChild.classList.remove('question');
+            // 禁用選項
+            Array.from(optionsContainer.children).forEach(b => b.disabled = true);
+          } else {
+            feedback.textContent = '❌ 再試一次！';
+            feedback.className = 'feedback error';
+          }
+        };
+        optionsContainer.appendChild(btn);
+      });
+    };
+
+    nextBtn.onclick = loadQuestion;
+    loadQuestion();
+  },
+
+  // --- 2. 數學數值規律 ---
+  initNumericalMode() {
+    const display = document.getElementById('numerical-display');
+    const optionsContainer = document.getElementById('numerical-options');
+    const feedback = document.getElementById('numerical-feedback');
+    const ruleDisplay = document.getElementById('numerical-rule');
+    const nextBtn = document.getElementById('numerical-next');
+
+    const loadQuestion = () => {
+      feedback.textContent = '';
+      ruleDisplay.style.display = 'none';
+      nextBtn.style.display = 'none';
+      const { sequence, answer, ruleText, options } = PatternEngine.generateNumericalPattern();
+      
+      display.innerHTML = sequence.map(item => `<div class="pattern-item">${item}</div>`).join('') + 
+                          `<div class="pattern-item question">?</div>`;
+      
+      optionsContainer.innerHTML = '';
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = opt;
+        btn.onclick = () => {
+          if (opt === answer) {
+            feedback.textContent = '🎉 答對了！';
+            feedback.className = 'feedback success';
+            ruleDisplay.textContent = ruleText;
+            ruleDisplay.style.display = 'block';
+            nextBtn.style.display = 'inline-block';
+            display.lastElementChild.textContent = answer;
+            display.lastElementChild.classList.remove('question');
+            Array.from(optionsContainer.children).forEach(b => b.disabled = true);
+          } else {
+            feedback.textContent = '❌ 再試一次！';
+            feedback.className = 'feedback error';
+          }
+        };
+        optionsContainer.appendChild(btn);
+      });
+    };
+
+    nextBtn.onclick = loadQuestion;
+    loadQuestion();
+  },
+
+  // --- 3. 幾何成長規律 ---
+  initGeometricMode() {
+    const display = document.getElementById('geometric-display');
+    const optionsContainer = document.getElementById('geometric-options');
+    const feedback = document.getElementById('geometric-feedback');
+    const nextBtn = document.getElementById('geometric-next');
+
+    const renderBlocks = (count) => {
+      let html = '<div class="geo-blocks">';
+      for(let i=0; i<count; i++) html += '<div class="geo-block"></div>';
+      html += '</div>';
+      return html;
+    };
+
+    const loadQuestion = () => {
+      feedback.textContent = '';
+      nextBtn.style.display = 'none';
+      const { sequence, answer, options } = PatternEngine.generateGeometricPattern();
+      
+      display.innerHTML = sequence.map(count => `<div class="pattern-item">${renderBlocks(count)}</div>`).join('') + 
+                          `<div class="pattern-item question">?</div>`;
+      
+      optionsContainer.innerHTML = '';
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = opt;
+        btn.onclick = () => {
+          if (opt === answer) {
+            feedback.textContent = '🎉 答對了！';
+            feedback.className = 'feedback success';
+            nextBtn.style.display = 'inline-block';
+            display.lastElementChild.innerHTML = renderBlocks(answer);
+            display.lastElementChild.classList.remove('question');
+            Array.from(optionsContainer.children).forEach(b => b.disabled = true);
+          } else {
+            feedback.textContent = '❌ 再試一次！';
+            feedback.className = 'feedback error';
+          }
+        };
+        optionsContainer.appendChild(btn);
+      });
+    };
+
+    nextBtn.onclick = loadQuestion;
+    loadQuestion();
+  },
+
+  // --- 4. 拖曳補齊規律 ---
+  initDragDropMode() {
+    const display = document.getElementById('dragdrop-display');
+    const palette = document.getElementById('dragdrop-palette');
+    const feedback = document.getElementById('dragdrop-feedback');
+    const nextBtn = document.getElementById('dragdrop-next');
+
+    let currentMissingItem = '';
+
+    const loadQuestion = () => {
+      feedback.textContent = '';
+      nextBtn.style.display = 'none';
+      const { sequence, missingItem, emptyIndex, palette: items } = PatternEngine.generateDragDropPattern();
+      currentMissingItem = missingItem;
+
+      display.innerHTML = '';
+      sequence.forEach((item, index) => {
+        const div = document.createElement('div');
+        if (item === '?') {
+          div.className = 'pattern-item dropzone';
+          div.dataset.index = index;
+          // 設置拖放事件
+          div.addEventListener('dragover', e => {
+            e.preventDefault();
+            div.style.backgroundColor = '#C7D2FE';
+          });
+          div.addEventListener('dragleave', e => {
+            div.style.backgroundColor = '#E0E7FF';
+          });
+          div.addEventListener('drop', e => {
+            e.preventDefault();
+            div.style.backgroundColor = '#E0E7FF';
+            const draggedEmoji = e.dataTransfer.getData('text/plain');
+            if (draggedEmoji === currentMissingItem) {
+              div.textContent = draggedEmoji;
+              div.classList.remove('dropzone');
+              feedback.textContent = '🎉 答對了！';
+              feedback.className = 'feedback success';
+              nextBtn.style.display = 'inline-block';
+            } else {
+              feedback.textContent = '❌ 圖形不對喔，再試一次！';
+              feedback.className = 'feedback error';
+            }
+          });
+        } else {
+          div.className = 'pattern-item';
+          div.textContent = item;
+        }
+        display.appendChild(div);
+      });
+
+      palette.innerHTML = '';
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'pattern-item draggable';
+        div.textContent = item;
+        div.draggable = true;
+        div.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', item);
+        });
+        palette.appendChild(div);
+      });
+    };
+
+    nextBtn.onclick = loadQuestion;
+    loadQuestion();
+  },
+
+  // --- 5. 創造規律沙盒 ---
+  initSandboxMode() {
+    const palette = document.getElementById('sandbox-palette');
+    const area = document.getElementById('sandbox-area');
+    const result = document.getElementById('sandbox-result');
+    const clearBtn = document.getElementById('sandbox-clear');
+    
+    let currentSequence = [];
+
+    // 初始化素材庫
+    PatternEngine.emojis.slice(0, 8).forEach(emoji => {
+      const div = document.createElement('div');
+      div.className = 'pattern-item draggable';
+      div.textContent = emoji;
+      div.draggable = true;
+      div.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', emoji);
+      });
+      palette.appendChild(div);
+    });
+
+    // 設置放置區
+    area.addEventListener('dragover', e => {
+      e.preventDefault();
+      area.style.borderColor = 'var(--primary)';
+    });
+    area.addEventListener('dragleave', e => {
+      area.style.borderColor = 'var(--border)';
+    });
+    area.addEventListener('drop', e => {
+      e.preventDefault();
+      area.style.borderColor = 'var(--border)';
+      const emoji = e.dataTransfer.getData('text/plain');
+      if (emoji) {
+        currentSequence.push(emoji);
+        renderArea();
+        analyze();
+      }
+    });
+
+    const renderArea = () => {
+      area.innerHTML = '';
+      if (currentSequence.length === 0) {
+        area.innerHTML = '<span style="color: var(--text-muted); width: 100%; text-align: center;">將圖形拖曳到這裡...</span>';
+        return;
+      }
+      currentSequence.forEach((emoji, index) => {
+        const div = document.createElement('div');
+        div.className = 'pattern-item draggable';
+        div.textContent = emoji;
+        div.title = "點擊移除";
+        div.style.cursor = "pointer";
+        // 點擊移除
+        div.onclick = () => {
+          currentSequence.splice(index, 1);
+          renderArea();
+          analyze();
+        };
+        area.appendChild(div);
+      });
+    };
+
+    const analyze = () => {
+      if (currentSequence.length < 4) {
+        result.textContent = '請放置至少 4 個圖形來產生規律';
+        result.style.color = 'var(--text-muted)';
+        return;
+      }
+      const pattern = PatternEngine.analyzePattern(currentSequence);
+      if (pattern) {
+        result.textContent = `✨ 系統偵測到規律：${pattern}！`;
+        result.style.color = 'var(--success)';
+      } else {
+        result.textContent = '尚未形成固定規律';
+        result.style.color = 'var(--text-muted)';
+      }
+    };
+
+    clearBtn.onclick = () => {
+      currentSequence = [];
+      renderArea();
+      analyze();
+    };
+
+    renderArea(); // Initial render
+  }
+};
+
+// 啟動應用
+document.addEventListener('DOMContentLoaded', () => {
+  App.init();
+});
+</script>
+</body>
+</html>
+
