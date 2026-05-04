@@ -1,576 +1,335 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>空間推理：正方體展開圖</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數學素養實驗室 | 教師資源中心</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'edu-blue': '#1A365D',      
+                        'edu-blue-dark': '#0f2442', 
+                        'edu-green': '#10B981',     
+                        'content-bg': '#F8FAFC'     
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar-item { transition: all 0.3s ease; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 切換畫面的淡入動畫 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const { useState } = React;
+<body class="bg-content-bg h-screen flex flex-col font-sans overflow-hidden text-slate-700">
 
-    const LEVEL_DATA = [
-      {
-        id: 1,
-        title: "基礎：十字型",
-        layout: "CROSS",
-        redFace: "Bottom",
-        targetFace: "Top",
-        question: "想像一下，哪一個面摺起來後，會跑到『紅色面』的正對面？",
-        options: [
-          { id: "A", text: "在紅色面旁邊的面", isCorrect: false, feedback: "旁邊的面摺起來會變成牆壁喔！" },
-          { id: "B", text: "和紅色面中間剛好隔著一個面的那個面", isCorrect: true, feedback: "🎉 完美推理！你發現了「相隔一面即是對立面」的規律！" }
-        ]
-      },
-      {
-        id: 2,
-        title: "基礎：T字型",
-        layout: "T_SHAPE",
-        redFace: "Bottom",
-        targetFace: "Top",
-        question: "這個T字型的展開圖，哪一個面摺起來會跑到『紅色面』的正對面？",
-        options: [
-          { id: "A", text: "最下面凸出來的那個面", isCorrect: false, feedback: "最下面的面摺起來會變成後面的牆壁喔！" },
-          { id: "B", text: "和紅色面中間剛好隔著一個面的那個面", isCorrect: true, feedback: "🎉 沒錯！「相隔一面即是對立面」的規律在這裡也適用！" }
-        ]
-      },
-      {
-        id: 3,
-        title: "進階：L字型",
-        layout: "L_SHAPE",
-        redFace: "Front",
-        targetFace: "Back",
-        question: "這個L字型的展開圖，哪一個面摺起來會跑到『紅色面』的正對面？",
-        options: [
-          { id: "A", text: "The topmost face", isCorrect: true, feedback: "🎉 Correct! You can imagine the red face standing up, and the topmost face will become the wall behind it." },
-          { id: "B", text: "The bottommost face", isCorrect: false, feedback: "The bottommost face will become the ceiling!" }
-        ]
-      },
-      {
-        id: 4,
-        title: "挑戰：錯位十字",
-        layout: "SHIFTED_CROSS",
-        redFace: "Left",
-        targetFace: "Right",
-        question: "這個錯位的十字型，『紅色面』的對立面在哪裡？",
-        options: [
-          { id: "A", text: "最右下角的那個面", isCorrect: true, feedback: "🎉 太厲害了！即使錯位了，你也能在腦中建構出空間關係！" },
-          { id: "B", text: "最上面的那個面", isCorrect: false, feedback: "最上面的面摺起來會變成後面的牆壁喔！" }
-        ]
-      },
-      {
-        id: 5,
-        title: "魔王：閃電樓梯",
-        layout: "STAIR",
-        redFace: "Left", 
-        targetFace: "Right",
-        question: "這個樓梯型的展開圖，哪一個面摺起來會跑到『紅色面』的正對面？",
-        options: [
-          { id: "A", text: "The face attached to it", isCorrect: false, feedback: "Adjacent faces will become walls!" },
-          { id: "B", text: "The face one step up and one step right", isCorrect: true, feedback: "🎉 Correct! You've mastered spatial reasoning!" },
-        ]
-      },
-      {
-        id: 6,
-        title: "終極：Z字型",
-        layout: "Z_SHAPE",
-        redFace: "Front",
-        targetFace: "Back",
-        question: "這個Z字型的展開圖，哪一個面摺起來會跑到『紅色面』的正對面？",
-        options: [
-          { id: "A", text: "The face on the far right", isCorrect: true, feedback: "🎉 Brilliant! You perfectly visualized the Z-shape folding into a cube." },
-          { id: "B", text: "The face on the far left", isCorrect: false, feedback: "The face on the far left will fold to become the Left face, not the opposite one!" }
-        ]
-      }
-    ];
-
-    function App() {
-      const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
-      const [phase, setPhase] = useState('PREDICT');
-      const [foldAngle, setFoldAngle] = useState(0);
-      const [selectedFace, setSelectedFace] = useState(null);
-      const [feedback, setFeedback] = useState(null);
-
-      const currentLevel = LEVEL_DATA[currentLevelIndex];
-
-      const resetLevel = (index) => {
-        setCurrentLevelIndex(index);
-        setPhase('PREDICT');
-        setFoldAngle(0);
-        setSelectedFace(null);
-        setFeedback(null);
-      };
-
-      const getFaceColor = (face) => {
-        if (face === currentLevel.redFace) return '#ef4444'; // red-500
-        if (face === selectedFace) return '#facc15'; // yellow-400
-        return '#e5e7eb'; // gray-200
-      };
-
-      const handleFaceClick = (face) => {
-        if (phase !== 'PREDICT') return;
-        if (face === currentLevel.redFace) return;
-        setSelectedFace(face);
-        setPhase('REASON');
-      };
-
-      const handleReasonClick = (option) => {
-        setFeedback(option.feedback);
-        setPhase('EXPLORE');
-      };
-
-      const FaceContent = ({ text }) => (
-        <React.Fragment>
-          <span
-            className="absolute inset-0 flex items-center justify-center font-bold text-3xl text-slate-800"
-            style={{
-              backfaceVisibility: 'hidden',
-              transform: 'translateZ(0.1px)',
-            }}
-          >
-            {text}
-          </span>
-          <span
-            className="absolute inset-0 flex items-center justify-center font-bold text-3xl text-slate-800"
-            style={{
-              backfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg) translateZ(0.1px)',
-            }}
-          >
-            {text}
-          </span>
-        </React.Fragment>
-      );
-
-      const Face = ({ id, label, transformOrigin, transform, top, left, onClick, children }) => {
-        return (
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onClick) onClick();
-            }}
-            style={{
-              position: 'absolute',
-              width: '120px',
-              height: '120px',
-              top: top !== undefined ? top : 0,
-              left: left !== undefined ? left : 0,
-              transformOrigin,
-              transform,
-              backgroundColor: getFaceColor(id),
-              border: '2px solid rgba(15, 23, 42, 0.8)',
-              boxSizing: 'border-box',
-              transformStyle: 'preserve-3d',
-              transition: phase === 'EXPLORE' ? 'none' : 'background-color 0.3s ease',
-              cursor: phase === 'PREDICT' && id !== currentLevel.redFace ? 'pointer' : 'default',
-            }}
-          >
-            <FaceContent text={label} />
-            {children}
-          </div>
-        );
-      };
-
-      const renderCrossLayout = () => (
-        <Face
-          id="Bottom"
-          label="下"
-          transformOrigin="center"
-          transform="none"
-        >
-          {/* Front Face */}
-          <Face
-            id="Front"
-            label="前"
-            transformOrigin="top"
-            transform={`rotateX(${foldAngle}deg)`}
-            top="100%"
-            onClick={() => handleFaceClick('Front')}
-          >
-            {/* Top Face */}
-            <Face
-              id="Top"
-              label="上"
-              transformOrigin="top"
-              transform={`rotateX(${foldAngle}deg)`}
-              top="100%"
-              onClick={() => handleFaceClick('Top')}
-            />
-          </Face>
-
-          {/* Back Face */}
-          <Face
-            id="Back"
-            label="後"
-            transformOrigin="bottom"
-            transform={`rotateX(${-foldAngle}deg)`}
-            top="-100%"
-            onClick={() => handleFaceClick('Back')}
-          />
-
-          {/* Left Face */}
-          <Face
-            id="Left"
-            label="左"
-            transformOrigin="right"
-            transform={`rotateY(${foldAngle}deg)`}
-            left="-100%"
-            onClick={() => handleFaceClick('Left')}
-          />
-
-          {/* Right Face */}
-          <Face
-            id="Right"
-            label="右"
-            transformOrigin="left"
-            transform={`rotateY(${-foldAngle}deg)`}
-            left="100%"
-            onClick={() => handleFaceClick('Right')}
-          />
-        </Face>
-      );
-
-      const renderStairLayout = () => (
-        <Face
-          id="Bottom"
-          label="下"
-          transformOrigin="center"
-          transform="none"
-        >
-          {/* Left Face */}
-          <Face
-            id="Left"
-            label="左"
-            transformOrigin="right"
-            transform={`rotateY(${foldAngle}deg)`}
-            left="-100%"
-            onClick={() => handleFaceClick('Left')}
-          />
-
-          {/* Back Face */}
-          <Face
-            id="Back"
-            label="後"
-            transformOrigin="bottom"
-            transform={`rotateX(${-foldAngle}deg)`}
-            top="-100%"
-            onClick={() => handleFaceClick('Back')}
-          >
-            {/* Top Face attached to Back */}
-            <Face
-              id="Top"
-              label="上"
-              transformOrigin="bottom"
-              transform={`rotateX(${-foldAngle}deg)`}
-              top="-100%"
-              onClick={() => handleFaceClick('Top')}
-            />
-          </Face>
-
-          {/* Front Face */}
-          <Face
-            id="Front"
-            label="前"
-            transformOrigin="top"
-            transform={`rotateX(${foldAngle}deg)`}
-            top="100%"
-            onClick={() => handleFaceClick('Front')}
-          >
-            {/* Right Face attached to Front */}
-            <Face
-              id="Right"
-              label="右"
-              transformOrigin="left"
-              transform={`rotateY(${-foldAngle}deg)`}
-              left="100%"
-              onClick={() => handleFaceClick('Right')}
-            />
-          </Face>
-        </Face>
-      );
-
-      const renderTShapeLayout = () => (
-        <Face
-          id="Bottom"
-          label="下"
-          transformOrigin="center"
-          transform="none"
-        >
-          {/* Back Face */}
-          <Face
-            id="Back"
-            label="後"
-            transformOrigin="top"
-            transform={`rotateX(${foldAngle}deg)`}
-            top="100%"
-            onClick={() => handleFaceClick('Back')}
-          />
-
-          {/* Front Face */}
-          <Face
-            id="Front"
-            label="前"
-            transformOrigin="bottom"
-            transform={`rotateX(${-foldAngle}deg)`}
-            top="-100%"
-            onClick={() => handleFaceClick('Front')}
-          >
-            {/* Top Face */}
-            <Face
-              id="Top"
-              label="上"
-              transformOrigin="bottom"
-              transform={`rotateX(${-foldAngle}deg)`}
-              top="-100%"
-              onClick={() => handleFaceClick('Top')}
-            >
-              {/* Left Face */}
-              <Face
-                id="Left"
-                label="左"
-                transformOrigin="right"
-                transform={`rotateY(${foldAngle}deg)`}
-                left="-100%"
-                onClick={() => handleFaceClick('Left')}
-              />
-              {/* Right Face */}
-              <Face
-                id="Right"
-                label="右"
-                transformOrigin="left"
-                transform={`rotateY(${-foldAngle}deg)`}
-                left="100%"
-                onClick={() => handleFaceClick('Right')}
-              />
-            </Face>
-          </Face>
-        </Face>
-      );
-
-      const renderLShapeLayout = () => (
-        <Face
-          id="Front"
-          label="前"
-          transformOrigin="center"
-          transform="none"
-          onClick={() => handleFaceClick('Front')}
-        >
-          <Face
-            id="Top"
-            label="上"
-            transformOrigin="bottom"
-            transform={`rotateX(${-foldAngle}deg)`}
-            top="-100%"
-            onClick={() => handleFaceClick('Top')}
-          >
-            <Face
-              id="Back"
-              label="後"
-              transformOrigin="bottom"
-              transform={`rotateX(${-foldAngle}deg)`}
-              top="-100%"
-              onClick={() => handleFaceClick('Back')}
-            />
-          </Face>
-          <Face
-            id="Bottom"
-            label="下"
-            transformOrigin="top"
-            transform={`rotateX(${foldAngle}deg)`}
-            top="100%"
-            onClick={() => handleFaceClick('Bottom')}
-          >
-            <Face
-              id="Left"
-              label="左"
-              transformOrigin="right"
-              transform={`rotateY(${foldAngle}deg)`}
-              left="-100%"
-              onClick={() => handleFaceClick('Left')}
-            />
-            <Face
-              id="Right"
-              label="右"
-              transformOrigin="left"
-              transform={`rotateY(${-foldAngle}deg)`}
-              left="100%"
-              onClick={() => handleFaceClick('Right')}
-            />
-          </Face>
-        </Face>
-      );
-
-      const renderZShapeLayout = () => (
-        <Face
-          id="Front"
-          label="前"
-          transformOrigin="center"
-          transform="none"
-          onClick={() => handleFaceClick('Front')}
-        >
-          <Face
-            id="Top"
-            label="上"
-            transformOrigin="bottom"
-            transform={`rotateX(${-foldAngle}deg)`}
-            top="-100%"
-            onClick={() => handleFaceClick('Top')}
-          >
-            <Face
-              id="Left"
-              label="左"
-              transformOrigin="right"
-              transform={`rotateY(${foldAngle}deg)`}
-              left="-100%"
-              onClick={() => handleFaceClick('Left')}
-            />
-          </Face>
-          <Face
-            id="Right"
-            label="右"
-            transformOrigin="left"
-            transform={`rotateY(${-foldAngle}deg)`}
-            left="100%"
-            onClick={() => handleFaceClick('Right')}
-          >
-            <Face
-              id="Bottom"
-              label="下"
-              transformOrigin="top"
-              transform={`rotateX(${foldAngle}deg)`}
-              top="100%"
-              onClick={() => handleFaceClick('Bottom')}
-            >
-              <Face
-                id="Back"
-                label="後"
-                transformOrigin="left"
-                transform={`rotateY(${-foldAngle}deg)`}
-                left="100%"
-                onClick={() => handleFaceClick('Back')}
-              />
-            </Face>
-          </Face>
-        </Face>
-      );
-
-      return (
-        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans overflow-hidden relative">
-          {/* Level Selector */}
-          <div className="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
-            {LEVEL_DATA.map((level, index) => (
-              <button
-                key={level.id}
-                onClick={() => resetLevel(index)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  currentLevelIndex === index
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                {level.title}
-              </button>
-            ))}
-          </div>
-
-          {/* Header */}
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-10">
-            {phase === 'PREDICT' && (
-              <div className="bg-white/90 backdrop-blur-sm px-6 py-4 rounded-2xl shadow-sm border border-slate-200 text-center">
-                <h2 className="text-xl md:text-2xl font-bold text-slate-800">
-                  {currentLevel.question.split(/『紅色面』|"red face"|red face/).map((part, i, arr) => {
-                    const isQuoted = currentLevel.question.includes('"red face"');
-                    const isEnglish = currentLevel.question.includes('red face');
-                    const highlightText = isQuoted ? '"red face"' : (isEnglish ? 'red face' : '『紅色面』');
-                    return (
-                      <React.Fragment key={i}>
-                        {part}
-                        {i < arr.length - 1 && <span className="text-red-500">{highlightText}</span>}
-                      </React.Fragment>
-                    );
-                  })}
-                </h2>
-                <p className="text-slate-500 mt-2">點擊你認為正確的灰色面</p>
-              </div>
-            )}
-            {phase === 'EXPLORE' && feedback && (
-              <div className="bg-emerald-50 px-6 py-4 rounded-2xl shadow-sm border border-emerald-200 text-center">
-                <h2 className="text-xl font-bold text-emerald-800">
-                  {feedback}
-                </h2>
-                <p className="text-emerald-600 mt-2">拖曳下方滑桿，觀察展開圖如何摺疊成正方體</p>
-              </div>
-            )}
-          </div>
-
-          {/* 3D Scene */}
-          <div className="relative w-full max-w-3xl aspect-square flex items-center justify-center">
-            <div
-              className="relative"
-              style={{
-                transform: 'rotateX(60deg) rotateZ(-45deg)',
-                transformStyle: 'preserve-3d',
-                width: '120px',
-                height: '120px',
-              }}
-            >
-              {currentLevel.layout === 'CROSS' && renderCrossLayout()}
-              {currentLevel.layout === 'STAIR' && renderStairLayout()}
-              {currentLevel.layout === 'T_SHAPE' && renderTShapeLayout()}
-              {currentLevel.layout === 'L_SHAPE' && renderLShapeLayout()}
-              {currentLevel.layout === 'Z_SHAPE' && renderZShapeLayout()}
-              {currentLevel.layout === 'SHIFTED_CROSS' && renderCrossLayout()}
+    <!-- 頂部導覽列 (支援 RWD 適配) -->
+    <header class="bg-edu-blue px-4 md:px-8 py-3 md:py-4 flex justify-between items-center shadow-md relative z-50">
+        <div class="flex items-center gap-2 md:gap-3">
+            <button id="mobile-menu-btn" class="md:hidden text-white hover:bg-white/10 p-2 rounded-lg transition-colors focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            
+            <div class="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-white/10 flex items-center justify-center text-white border border-white/20 shadow-sm text-lg md:text-xl">
+                📐
             </div>
-          </div>
-
-          {/* Overlays */}
-          {phase === 'REASON' && (
-            <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-              <div className="bg-white p-6 md:p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
-                <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                  <span className="text-2xl">🤔</span> 你為什麼覺得是這個面？
-                </h3>
-                <div className="space-y-3">
-                  {currentLevel.options.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => handleReasonClick(option)}
-                      className="w-full text-left p-4 hover:bg-slate-50 rounded-xl border border-slate-200 transition-colors font-medium text-slate-700"
-                    >
-                      {option.id}. {option.text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Slider */}
-          {phase === 'EXPLORE' && (
-            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 bg-white px-8 py-5 rounded-2xl shadow-lg flex items-center gap-6 w-[90%] max-w-md border border-slate-200 z-10">
-              <span className="font-bold text-slate-600 whitespace-nowrap">展開</span>
-              <input
-                type="range"
-                min="0"
-                max="90"
-                value={foldAngle}
-                onChange={(e) => setFoldAngle(Number(e.target.value))}
-                className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              />
-              <span className="font-bold text-slate-600 whitespace-nowrap">摺疊</span>
-            </div>
-          )}
+            <span class="text-lg md:text-xl font-bold tracking-tight text-white flex items-center">
+                數學素養實驗室 
+                <span class="hidden sm:inline text-xs md:text-sm font-normal text-slate-400 ml-2">| 教師資源中心</span>
+            </span>
         </div>
-      );
-    }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
+        <div class="flex items-center gap-3 md:gap-5">
+            <button class="hidden lg:flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white transition-colors font-medium text-sm">
+                108 課綱對照表
+            </button>
+            <button class="hidden sm:flex items-center gap-2 px-5 py-2 bg-edu-green text-white rounded-full hover:bg-emerald-600 transition-colors font-bold text-sm shadow-sm whitespace-nowrap">
+                切換至學生遊戲版 🚀
+            </button>
+            <button class="sm:hidden flex items-center justify-center w-9 h-9 bg-edu-green text-white rounded-full hover:bg-emerald-600 transition-colors shadow-sm">
+                🚀
+            </button>
+            <div class="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-slate-200 hover:text-white hover:bg-white/20 cursor-pointer transition-colors">
+                 👤
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <div id="sidebar-overlay" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-30 hidden transition-opacity md:hidden"></div>
+
+        <!-- 側邊欄 -->
+        <aside id="sidebar" class="absolute inset-y-0 left-0 z-40 w-[260px] md:w-72 bg-edu-blue transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col overflow-y-auto no-scrollbar border-t border-white/10 shadow-[4px_0_24px_rgba(26,54,93,0.3)] md:shadow-[4px_0_24px_rgba(26,54,93,0.15)] pb-10">
+            <nav class="flex-1 py-4 md:py-6 space-y-3 md:space-y-4">
+                
+                <!-- 低年級區塊 -->
+                <div>
+                    <div class="px-5 md:px-6 py-3 flex items-center justify-between text-slate-300 font-bold hover:text-white hover:bg-white/5 cursor-pointer transition-colors sidebar-item mx-3 md:mx-4 rounded-xl">
+                        <span class="flex items-center gap-2 text-sm md:text-base">🌱 低年級 (1~2年級)</span>
+                        <span class="text-[10px] opacity-50">▼</span>
+                    </div>
+                    <div class="flex flex-col mt-2 space-y-1">
+                        <a href="teachergeometry.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            低年級 數學幾何 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="teacher3dmath.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            低年級 幾何小探險 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="teacherweight.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            低年級 重量量量樂 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="teacherruler.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            低年級 快樂學測量 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="teachervolume.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            低年級 倒水小遊戲 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="teacherconveniencestore.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            低年級 快樂便利商店 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 中年級區塊 (加入科技藍色系高亮狀態) -->
+                <div>
+                    <!-- 分類高亮 -->
+                    <div class="px-5 md:px-6 py-3 flex items-center justify-between text-white font-bold bg-white/5 border-l-4 border-blue-400 cursor-pointer mx-3 md:mx-4 rounded-r-xl shadow-sm">
+                        <span class="flex items-center gap-2 text-sm md:text-base"><span class="text-blue-400">🌿</span> 中年級 (3~4年級)</span>
+                        <span class="text-[10px] text-slate-400">▼</span>
+                    </div>
+                    <div class="flex flex-col mt-1 space-y-1">
+                        <a href="midgradeteachearea.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            中年級 乘法面積陣列與分配律 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="midgradeteacherdata.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            中年級 資料圖表實驗室 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="midgradeteachergeoboard.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            中年級 數位釘板 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="midgradeteacherfraction.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            中年級 分數換算 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="midgradeteacherliquid.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            中年級 液體 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="midgradeteacherregularity.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            中年級 規律 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="midgradeteachertime.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            中年級 時間 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="midgradeteacherprotractor.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            中年級 角度 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        
+                        <!-- 👉 當前所在頁面高亮：中年級 方塊關係 -->
+                        <a href="midgradeopencube.html" class="px-6 md:px-8 py-3 text-xs md:text-sm font-bold text-blue-400 bg-edu-blue-dark/50 flex items-center justify-between mx-3 md:mx-4 rounded-xl shadow-inner border border-white/5">
+                            中年級 方塊關係 <span class="text-[10px] text-blue-400 font-mono">&gt;</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 高年級區塊 -->
+                <div>
+                    <div class="px-5 md:px-6 py-3 flex items-center justify-between text-slate-300 font-bold hover:text-white hover:bg-white/5 cursor-pointer transition-colors sidebar-item mx-3 md:mx-4 rounded-xl">
+                        <span class="flex items-center gap-2 text-sm md:text-base">🌳 高年級 (5~6年級)</span>
+                        <span class="text-[10px] opacity-50">▼</span>
+                    </div>
+                    <div class="flex flex-col mt-1 space-y-1">
+                        <a href="highgraderatio.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            高年級 比例 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="highgradechart.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            高年級 圖表 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="highgradeprobility.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            高年級 機率 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="highgradediscount.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            高年級 折扣 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="highgradecube.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            高年級 方塊 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                        <a href="highgradespeed.html" class="px-6 md:px-8 py-3 text-xs md:text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors sidebar-item mx-3 md:mx-4 rounded-xl flex items-center justify-between">
+                            高年級 速度 <span class="text-[10px] opacity-0 group-hover:opacity-100 font-mono">&gt;</span>
+                        </a>
+                    </div>
+                </div>
+
+            </nav>
+        </aside>
+
+        <!-- 主內容區 (加入 flex flex-col 以利 iframe 撐高) -->
+        <main class="flex-1 overflow-y-auto overflow-x-hidden p-5 md:p-10 bg-content-bg w-full flex flex-col">
+            
+            <!-- 整理文字層次：麵包屑導覽取代重複大標題 -->
+            <div class="text-xs md:text-sm font-medium text-slate-500 mb-6 md:mb-8 flex flex-wrap items-center gap-2 bg-white px-4 md:px-5 py-2.5 rounded-xl shadow-sm border border-slate-100 inline-flex max-w-full w-max">
+                <span class="hover:text-edu-blue cursor-pointer transition-colors whitespace-nowrap">首頁</span> <span class="text-slate-300">&gt;</span> 
+                <span class="hover:text-edu-blue cursor-pointer transition-colors whitespace-nowrap">中年級</span> <span class="text-slate-300">&gt;</span> 
+                <span class="text-edu-blue font-bold whitespace-nowrap">中年級 方塊關係</span>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- 區塊 1：教具卡片列表                              -->
+            <!-- ============================================== -->
+            <div id="view-cards" class="flex flex-col animate-[fadeIn_0.3s_ease-in-out]">
+                <!-- 卡片網格 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-stretch">
+                    
+                    <!-- 優化主視覺卡片 -->
+                    <div class="group bg-white rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden hover:shadow-[0_12px_30px_rgba(26,54,93,0.12)] transition-all duration-300 flex flex-col h-full relative">
+                        
+                        <div class="p-6 md:p-8 flex flex-col h-full relative z-10">
+                            
+                            <!-- 皇家藍/科技藍色系標籤 -->
+                            <div class="flex justify-between items-start mb-6">
+                                <span class="bg-slate-50 text-slate-500 text-[10px] md:text-xs px-3 py-1 rounded-full font-bold border border-slate-200">中年級</span>
+                                <!-- 課綱代碼修正為空間與形狀 (S) 系列 -->
+                                <span class="bg-blue-50 text-blue-600 text-[10px] md:text-xs font-bold px-3 py-1 rounded-md border border-blue-100">S-3-4</span>
+                            </div>
+
+                            <!-- 灰色托盤與箱子/展開圖 Emoji -->
+                            <div class="h-36 md:h-44 bg-slate-50/80 rounded-xl flex items-center justify-center mb-6 text-5xl md:text-6xl border border-slate-100 group-hover:bg-blue-50/60 transition-colors">
+                                📦
+                            </div>
+
+                            <div class="mb-8">
+                                <h3 class="font-black text-xl md:text-2xl text-edu-blue mb-3">方塊關係</h3>
+                                <p class="text-slate-400 text-xs md:text-sm leading-relaxed">
+                                    透過 3D 展開圖與三視圖練習，培養空間幾何感與立體結構認知。
+                                </p>
+                            </div>
+
+                            <!-- 科技藍色漸層按鈕改為觸發 iframe -->
+                            <div class="mt-auto flex items-center justify-between relative">
+                                <button onclick="openTool('../midgrade/midgradeopencube.html', '中年級 方塊關係')" class="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white font-bold py-2.5 md:py-3 px-6 rounded-xl transition-all duration-300 shadow-md shadow-blue-200 group-hover:-translate-y-1 text-sm md:text-base cursor-pointer">
+                                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"></path></svg>
+                                    進入教具
+                                </button>
+                                
+                                <!-- 吉祥物預留舞台 -->
+                                <div class="absolute -right-2 md:-right-4 -top-6 md:-top-8 w-14 h-14 md:w-16 md:h-16 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end justify-center pointer-events-none">
+                                    <span class="text-2xl md:text-3xl filter drop-shadow-md">👀</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div> 
+            </div>
+
+            <!-- ============================================== -->
+            <!-- 區塊 2：教具播放區 (高度拉到 min-h-[1200px])        -->
+            <!-- ============================================== -->
+            <div id="view-iframe" class="hidden flex-1 flex-col w-full min-h-[1200px] animate-[fadeIn_0.3s_ease-in-out]">
+                
+                <!-- 工具控制列 -->
+                <div class="flex justify-between items-center mb-4 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100">
+                    <h2 id="iframe-title" class="text-lg md:text-xl font-black text-edu-blue flex items-center gap-2">
+                        <span class="text-2xl">🎮</span> 教具載入中...
+                    </h2>
+                    
+                    <div class="flex items-center gap-3">
+                        <!-- 全螢幕放大按鈕 -->
+                        <button onclick="toggleFullScreen()" class="hidden sm:flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-bold transition-colors text-sm md:text-base border border-blue-200 cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                            全螢幕放大
+                        </button>
+                        
+                        <!-- 返回列表按鈕 -->
+                        <button onclick="closeTool()" class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 rounded-lg font-bold transition-colors text-sm md:text-base border border-slate-200 hover:border-red-200 cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                            返回列表
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 畫框載體 -->
+                <div class="flex-1 bg-slate-50 rounded-xl shadow-inner border border-slate-200 overflow-hidden relative">
+                    <div class="absolute inset-0 flex items-center justify-center text-slate-300 flex-col gap-3 -z-10">
+                        <svg class="w-10 h-10 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <p class="font-medium tracking-wider">教具環境準備中...</p>
+                    </div>
+                    
+                    <iframe id="tool-iframe" src="" class="w-full h-full border-none relative z-10 bg-white" title="教具操作畫面"></iframe>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // 側邊欄控制
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        menuBtn.addEventListener('click', () => {
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+        });
+
+        overlay.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+        });
+
+        // iframe 相關控制邏輯
+        const viewCards = document.getElementById('view-cards');
+        const viewIframe = document.getElementById('view-iframe');
+        const toolIframe = document.getElementById('tool-iframe');
+        const iframeTitle = document.getElementById('iframe-title');
+
+        // 開啟教具
+        function openTool(url, title) {
+            viewCards.classList.add('hidden');
+            viewIframe.classList.remove('hidden');
+            viewIframe.classList.add('flex'); 
+            
+            iframeTitle.innerHTML = `<span class="text-2xl">🎮</span> ${title}`;
+            toolIframe.src = url;
+        }
+
+        // 關閉教具
+        function closeTool() {
+            viewIframe.classList.add('hidden');
+            viewIframe.classList.remove('flex');
+            viewCards.classList.remove('hidden');
+            
+            toolIframe.src = ''; 
+        }
+
+        // 全螢幕放大功能
+        function toggleFullScreen() {
+            const elem = document.getElementById('tool-iframe');
+            
+            if (!document.fullscreenElement) {
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) { /* Safari */
+                    elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) { /* IE11 */
+                    elem.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+    </script>
 </body>
 </html>
