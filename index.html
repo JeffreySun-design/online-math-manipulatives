@@ -10,52 +10,129 @@
             theme: {
                 extend: {
                     colors: {
-                        'edu-blue': '#1A365D',   /* 教師版的專業深藍 */
-                        'stu-yellow': '#F59E0B', /* 學生版的活潑亮黃 */
-                        'edu-bg': '#F3F4F6'
+                        'edu-blue': '#0A2540',   /* 深藍背景色 */
+                        'edu-green': '#10B981',  /* 教師版綠色 */
+                        'stu-blue': '#3B82F6',   /* 學生版亮藍色 */
+                        'edu-bg': '#F8FAFC'      /* 頁面底色 */
                     }
                 }
             }
         }
     </script>
-</head>
-<body class="bg-edu-bg h-screen flex flex-col items-center justify-center font-sans">
-
-    <div class="max-w-4xl w-full px-6 text-center">
+    <style>
+        html { scroll-behavior: smooth; }
         
-        <div class="mb-16">
-            <div class="text-6xl mb-6 flex justify-center gap-4">
-                <span>📐</span>
-                <span>💡</span>
-            </div>
-            <h1 class="text-4xl md:text-5xl font-bold text-edu-blue mb-4 tracking-wide">歡迎來到 數學素養實驗室</h1>
-            <p class="text-xl text-gray-500">請選擇您的身分，進入專屬的互動學習空間</p>
-        </div>
+        /* 主視覺背景設定 */
+        .bg-hero-custom {
+            /* 💡 未來如果有背景插畫，請把下面這行改成： 
+               background-image: url('你的圖片路徑.jpg'); */
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); 
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+    </style>
+</head>
+<body class="bg-edu-bg font-sans text-gray-800 antialiased overflow-x-hidden">
 
+    <div class="relative w-full h-[500px] bg-hero-custom flex flex-col items-center pt-20">
+        <div class="absolute inset-0 bg-black/10 z-0"></div>
+        
+        <div class="relative z-10 text-center text-white px-4 max-w-3xl mt-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4 tracking-wider drop-shadow-lg">
+                數學素養實驗室 <span class="text-3xl md:text-4xl font-normal">(低年級)</span>
+            </h1>
+            <p class="text-lg md:text-xl font-light drop-shadow-md leading-relaxed">
+                這是一個專為你設計的數學素養互動學習平台.....這裡沒有枯燥的考卷，<br>
+                只有好玩的互動遊戲。我們精心設計了多款互動教具與有趣的遊戲，讓我們<br>
+                陪你一起體驗數學素養的樂趣！
+            </p>
+        </div>
+    </div>
+
+    <div class="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-32 pb-16">
         <div class="flex flex-col md:flex-row gap-8 justify-center">
             
-            <a href="teacherport/teachergeometry.html" class="group flex-1 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-10 border-t-8 border-edu-blue hover:-translate-y-2 cursor-pointer text-left no-underline">
-                <div class="text-6xl mb-6">🧑‍🏫</div>
-                <h2 class="text-3xl font-bold text-edu-blue mb-3 group-hover:text-blue-700 transition-colors">我是教育者</h2>
-                <p class="text-gray-500 mb-8 leading-relaxed">
-                    進入教師資源中心。探索涵蓋各年級的互動數學教具，輔助思考教學，並提供完整的題庫設計與課綱指引。
-                </p>
-                <div class="text-edu-blue font-bold flex items-center gap-2 text-lg">
-                    進入教師版 <span class="group-hover:translate-x-2 transition-transform">→</span>
+            <a href="student.html" class="group flex-1 bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden hover:-translate-y-2 cursor-pointer no-underline flex flex-col">
+                <div class="h-48 bg-blue-100 flex items-center justify-center p-4 relative overflow-hidden">
+                    <div class="text-8xl relative z-10 group-hover:scale-110 transition-transform duration-500">🚀</div>
+                    <div class="absolute w-32 h-32 bg-blue-200 rounded-full blur-2xl top-0 right-0 opacity-50"></div>
+                </div>
+                <div class="bg-stu-blue text-white p-8 flex-grow flex flex-col items-center text-center">
+                    <h2 class="text-3xl font-bold mb-4 tracking-wide">我是小學生</h2>
+                    <p class="text-blue-50 text-sm leading-relaxed mb-6">
+                        這是一個專為你設計的數學素養互動學習平台...這裡沒有枯燥的考卷，只有好玩的互動遊戲。我們精心設計了多款互動教具與有趣的遊戲，讓我們陪你一起體驗數學素養的樂趣！
+                    </p>
                 </div>
             </a>
 
-            <a href="student.html" class="group flex-1 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-10 border-t-8 border-stu-yellow hover:-translate-y-2 cursor-pointer text-left no-underline">
-                <div class="text-6xl mb-6">🚀</div>
-                <h2 class="text-3xl font-bold text-stu-yellow mb-3 group-hover:text-orange-500 transition-colors">我是小學生</h2>
-                <p class="text-gray-500 mb-8 leading-relaxed">
-                    進入數學大冒險！這裡沒有枯燥的考卷，只有好玩的互動遊戲與闖關挑戰，陪你一起動手玩數學。
-                </p>
-                <div class="text-stu-yellow font-bold flex items-center gap-2 text-lg">
-                    進入遊戲版 <span class="group-hover:translate-x-2 transition-transform">→</span>
+            <a href="teacherport/teachergeometry.html" class="group flex-1 bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden hover:-translate-y-2 cursor-pointer no-underline flex flex-col">
+                <div class="h-48 bg-green-100 flex items-center justify-center p-4 relative overflow-hidden">
+                    <div class="text-8xl relative z-10 group-hover:scale-110 transition-transform duration-500">🧑‍🏫</div>
+                    <div class="absolute w-32 h-32 bg-green-200 rounded-full blur-2xl top-0 left-0 opacity-50"></div>
+                </div>
+                <div class="bg-edu-green text-white p-8 flex-grow flex flex-col items-center text-center">
+                    <h2 class="text-3xl font-bold mb-4 tracking-wide">我是教育者</h2>
+                    <p class="text-green-50 text-sm leading-relaxed mb-6">
+                        這是一個專為老師設計的教學資源中心...我們整合了所有核心素養教具、課程教案與課綱指引，更提供彈性調整的教學資源，輔助您在教學現場所需。
+                    </p>
                 </div>
             </a>
 
+        </div>
+    </div>
+
+    <div class="text-center pb-20 mt-4 relative z-20">
+        <h3 class="text-2xl font-bold text-gray-800 mb-8">
+            歡迎光臨「核心素養大觀園 (低年級 數學科)」
+        </h3>
+        
+        <a href="#concept-section" class="inline-flex flex-col items-center text-gray-500 hover:text-edu-blue transition-colors animate-bounce cursor-pointer">
+            <span class="text-sm font-medium mb-2">了解設計理念</span>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+            </svg>
+        </a>
+    </div>
+
+    <div id="concept-section" class="bg-white py-24 px-6 border-t border-gray-100 shadow-inner">
+        <div class="max-w-5xl mx-auto">
+            
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-edu-blue mb-4">不只是刷題，而是思維的重建</h2>
+                <div class="w-24 h-1 bg-stu-blue mx-auto mb-6 rounded-full"></div>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                    本實驗室致力於翻轉傳統數學教學，透過數位互動降低認知負荷，讓抽象概念變得直觀可見。
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                
+                <div class="bg-edu-bg rounded-2xl p-8 hover:shadow-md transition-shadow">
+                    <div class="text-4xl mb-4">🔍</div>
+                    <h3 class="text-xl font-bold text-edu-blue mb-3">視覺化抽象概念</h3>
+                    <p class="text-gray-600 leading-relaxed text-sm">
+                        傳統教學常受限於紙本的靜態性。我們觀察到，學生在學習幾何分割或空間變化時常遇到瓶頸。透過將抽象數值轉化為直觀的操作體驗，幫助學生從死背公式轉向直觀的感受與理解。
+                    </p>
+                </div>
+
+                <div class="bg-edu-bg rounded-2xl p-8 hover:shadow-md transition-shadow">
+                    <div class="text-4xl mb-4">⚙️</div>
+                    <h3 class="text-xl font-bold text-edu-blue mb-3">一站式內嵌體驗</h3>
+                    <p class="text-gray-600 leading-relaxed text-sm">
+                        整合了高達 21 套互動模組。採用創新的「不跳轉、內嵌式」介面設計，讓教學演示與學生自主操作無縫接軌，不需跳轉視窗，保持教學與學習的流暢度。
+                    </p>
+                </div>
+
+                <div class="bg-edu-bg rounded-2xl p-8 hover:shadow-md transition-shadow">
+                    <div class="text-4xl mb-4">🎯</div>
+                    <h3 class="text-xl font-bold text-edu-blue mb-3">對接 108 課綱</h3>
+                    <p class="text-gray-600 leading-relaxed text-sm">
+                        不只提供題庫，更著重於「輔助思考教學」。緊扣 108 課綱精神，提供完整的教案指引與素養題庫，成為教育者引導學生解決真實問題的最得力輔助工具。
+                    </p>
+                </div>
+
+            </div>
         </div>
     </div>
 

@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>資料圖表實驗室 (Data Chart Lab)</title>
+    <style>
+      :root {
+        --bg-color: #f8fafc;
+        --panel-bg: #ffffff;
+        --text-color: #334155;
+        --border-color: #e2e8f0;
+        --primary-color: #3b82f6;
+        --primary-hover: #2563eb;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+        line-height: 1.5;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      header h1 {
+        text-align: center;
+        color: var(--text-color);
+        margin-bottom: 5px;
+      }
+
+      .main-content {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      .left-panel, .right-panel {
+        flex: 1;
+        min-width: 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      section {
+        background: var(--panel-bg);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      }
+
+      h2 {
+        margin-top: 0;
+        font-size: 1.25rem;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 10px;
+        color: var(--primary-color);
+      }
+
+      /* Controls */
+      .control-btn {
+        padding: 6px 12px;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .control-btn:hover {
+        background: #e2e8f0;
+      }
+
+      .control-btn.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+      }
+
+      /* Data Collection */
+      .drag-source {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .student-icon {
+        display: inline-block;
+        font-size: 2.5rem;
+        padding: 10px 20px;
+        background: #e0f2fe;
+        border: 2px dashed var(--primary-color);
+        border-radius: 12px;
+        cursor: grab;
+        user-select: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      }
+
+      .student-icon:active {
+        cursor: grabbing;
+      }
+
+      .drop-zones {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .drop-zone {
+        padding: 15px;
+        text-align: center;
+        background: #f8fafc;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        font-weight: 600;
+      }
+
+      .drop-zone.drag-over {
+        background: #e0f2fe;
+        border-color: var(--primary-color);
+        transform: scale(1.02);
+      }
+
+      .count {
+        color: var(--primary-color);
+        font-size: 1.1em;
+      }
+
+      /* Data Table */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 12px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+      }
+
+      th {
+        background-color: #f1f5f9;
+        font-weight: 600;
+      }
+
+      tbody tr {
+        transition: transform 0.3s ease, background-color 0.3s ease;
+      }
+
+      input[type="number"] {
+        width: 70px;
+        padding: 6px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+
+      input[type="number"]:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      }
+
+      /* Chart Area */
+      #generate-chart-btn {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        margin-bottom: 20px;
+        transition: background 0.2s;
+      }
+
+      #generate-chart-btn:hover {
+        background: var(--primary-hover);
+      }
+
+      .chart-container {
+        height: 250px;
+        border-left: 3px solid #94a3b8;
+        border-bottom: 3px solid #94a3b8;
+        display: flex;
+        align-items: flex-end;
+        padding-top: 20px;
+        position: relative;
+        opacity: 0.3;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        margin-top: 10px;
+      }
+
+      .chart-container.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .bars {
+        display: flex;
+        justify-content: space-around;
+        width: 100%;
+        height: 100%;
+        align-items: flex-end;
+      }
+
+      .bar-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100%;
+        justify-content: flex-end;
+        width: 20%;
+        transition: transform 0.5s ease;
+      }
+
+      .bar {
+        width: 80%;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 8px;
+        color: white;
+        font-weight: bold;
+        font-size: 1.1rem;
+        transition: height 0.5s ease-in-out;
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+        cursor: pointer;
+        box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        overflow: hidden;
+      }
+
+      .bar:hover {
+        filter: brightness(1.1);
+      }
+
+      .bar-label {
+        margin-top: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      /* Pictogram Mode */
+      .pictogram-mode .bar {
+        background-color: transparent !important;
+        box-shadow: none;
+        flex-direction: column-reverse;
+        justify-content: flex-start;
+        align-items: center;
+        padding-top: 0;
+        gap: 4px;
+      }
+
+      .pictogram-mode .bar-value {
+        color: var(--text-color);
+        margin-bottom: 4px;
+      }
+
+      .picto-icon {
+        font-size: 1.5rem;
+        line-height: 1;
+        animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        opacity: 0;
+        transform: scale(0);
+      }
+
+      @keyframes popIn {
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      /* Task Area */
+      .task-content {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        font-size: 1.05rem;
+      }
+
+      .task-feedback {
+        font-weight: bold;
+        min-height: 24px;
+        padding: 10px;
+        border-radius: 6px;
+        background: #f8fafc;
+      }
+
+      .success { color: #15803d; background: #dcfce7; }
+      .error { color: #b91c1c; background: #fee2e2; }
+
+      .task-btn {
+        padding: 8px 16px;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .task-btn:hover:not(:disabled) {
+        background: #e2e8f0;
+      }
+
+      .task-btn.selected {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+      }
+
+      .task-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .task-input {
+        width: 100px;
+        padding: 8px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>📊 資料圖表實驗室 (Data Chart Lab)</h1>
+        <p style="text-align: center; color: #666;">學習資料收集、建立表格與繪製長條圖/象形圖</p>
+      </header>
+      <div class="main-content">
+        <div class="left-panel">
+          <section class="data-collection">
+            <h2>1. 資料區 (拖曳投票)</h2>
+            <p style="font-size: 0.9rem; color: #555; margin-bottom: 10px;">請將學生圖示拖曳到喜歡的水果中：</p>
+            <div class="drag-source">
+              <div class="student-icon" draggable="true" id="student-drag">🧑‍🎓 (拖曳我)</div>
+            </div>
+            <div class="drop-zones" id="drop-zones-container">
+              <!-- 動態生成拖曳區 -->
+            </div>
+          </section>
+          
+          <section class="data-table">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px;">
+              <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">2. 表格區</h2>
+              <div class="sort-controls">
+                <button id="sort-desc-btn" class="control-btn" title="由大到小排序">⬇️ 排序</button>
+                <button id="sort-asc-btn" class="control-btn" title="由小到大排序">⬆️ 排序</button>
+              </div>
+            </div>
+            <p style="font-size: 0.9rem; color: #555; margin-bottom: 10px;">你也可以直接在這裡修改數字：</p>
+            <table>
+              <thead>
+                <tr><th>水果</th><th>數量</th></tr>
+              </thead>
+              <tbody id="table-body">
+                <!-- 動態生成表格內容 -->
+              </tbody>
+            </table>
+          </section>
+        </div>
+        
+        <div class="right-panel">
+          <section class="chart-area">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px;">
+              <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">3. 圖表區</h2>
+              <div class="chart-controls">
+                <button id="toggle-bar-btn" class="control-btn active">📊 長條圖</button>
+                <button id="toggle-picto-btn" class="control-btn">🍎 象形圖</button>
+              </div>
+            </div>
+            <button id="generate-chart-btn">生成圖表</button>
+            <div class="chart-container" id="chart-container">
+              <div class="y-axis" id="y-axis"></div>
+              <div class="bars" id="chart-content">
+                <!-- 動態生成圖表內容 -->
+              </div>
+            </div>
+          </section>
+          
+          <section class="task-area">
+            <h2>4. 互動任務與預測</h2>
+            <div id="task-content" class="task-content"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <script>
+      // 狀態管理 (State Management)
+      const state = {
+        fruits: [
+          { id: 'apple', name: '蘋果', emoji: '🍎', count: 0, color: '#ef4444' },
+          { id: 'banana', name: '香蕉', emoji: '🍌', count: 0, color: '#eab308' },
+          { id: 'mango', name: '芒果', emoji: '🥭', count: 0, color: '#f97316' },
+          { id: 'grape', name: '葡萄', emoji: '🍇', count: 0, color: '#a855f7' }
+        ],
+        chartActive: false,
+        chartType: 'bar', // 'bar' or 'pictogram'
+        sortOrder: 'none', // 'none', 'desc', 'asc'
+        currentTask: 1,
+        predictionLocked: false,
+        predictionAnswer: '',
+        task2Fruits: [],
+        task3TargetCount: 0
+      };
+
+      // 取得當前排序後的陣列
+      function getSortedFruits() {
+        const arr = [...state.fruits];
+        if (state.sortOrder === 'desc') {
+          arr.sort((a, b) => b.count - a.count);
+        } else if (state.sortOrder === 'asc') {
+          arr.sort((a, b) => a.count - b.count);
+        }
+        return arr;
+      }
+
+      // 根據狀態更新畫面 (Update UI based on state)
+      function updateUI() {
+        const sortedFruits = getSortedFruits();
+        renderDropZones(sortedFruits);
+        renderTable(sortedFruits);
+        
+        if (state.chartActive && !state.predictionLocked) {
+          renderChart(sortedFruits);
+        }
+      }
+
+      // 渲染拖曳區
+      function renderDropZones(sortedFruits) {
+        const container = document.getElementById('drop-zones-container');
+        if (!container) return;
+        
+        // 保持原本順序或跟隨排序？通常拖曳區保持固定順序比較好操作，這裡我們保持原始順序
+        container.innerHTML = state.fruits.map(f => `
+          <div class="drop-zone" data-fruit="${f.id}">
+            ${f.emoji} ${f.name} (<span class="count">${f.count}</span>)
+          </div>
+        `).join('');
+
+        // 重新綁定事件
+        container.querySelectorAll('.drop-zone').forEach(zone => {
+          zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+            zone.classList.add('drag-over');
+          });
+
+          zone.addEventListener('dragleave', () => {
+            zone.classList.remove('drag-over');
+          });
+
+          zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            const fruitId = zone.getAttribute('data-fruit');
+            const fruit = state.fruits.find(f => f.id === fruitId);
+            if (fruit) {
+              fruit.count++;
+              updateUI();
+            }
+          });
+        });
+      }
+
+      // 渲染表格
+      function renderTable(sortedFruits) {
+        const tbody = document.getElementById('table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = sortedFruits.map(f => `
+          <tr>
+            <td>${f.emoji} ${f.name}</td>
+            <td><input type="number" min="0" data-fruit="${f.id}" value="${f.count}"></td>
+          </tr>
+        `).join('');
+
+        // 重新綁定輸入事件
+        tbody.querySelectorAll('input[type="number"]').forEach(input => {
+          input.addEventListener('input', (e) => {
+            const target = e.target;
+            const fruitId = target.getAttribute('data-fruit');
+            const val = parseInt(target.value) || 0;
+            const fruit = state.fruits.find(f => f.id === fruitId);
+            if (fruit) {
+              fruit.count = Math.max(0, val);
+              // 如果正在排序，輸入可能會改變順序，這裡為了體驗流暢，不立刻重新排序，
+              // 而是等失去焦點或點擊排序按鈕時再排。但為了簡單，我們直接更新 UI。
+              updateUI();
+            }
+          });
+        });
+      }
+
+      // 渲染圖表
+      function renderChart(sortedFruits) {
+        const container = document.getElementById('chart-content');
+        if (!container) return;
+
+        const maxVal = Math.max(...state.fruits.map(f => f.count), 10); 
+        
+        // 設置圖表模式 class
+        const chartContainer = document.getElementById('chart-container');
+        if (state.chartType === 'pictogram') {
+          chartContainer?.classList.add('pictogram-mode');
+        } else {
+          chartContainer?.classList.remove('pictogram-mode');
+        }
+
+        container.innerHTML = sortedFruits.map(f => {
+          const heightPct = (f.count / maxVal) * 100;
+          
+          let barContent = '';
+          if (state.chartType === 'pictogram') {
+            // 象形圖：生成對應數量的 emoji
+            const emojis = Array(f.count).fill(`<div class="picto-icon">${f.emoji}</div>`).join('');
+            barContent = `<span class="bar-value">${f.count > 0 ? f.count : ''}</span>${emojis}`;
+          } else {
+            // 長條圖
+            barContent = `<span class="bar-value">${f.count > 0 ? f.count : ''}</span>`;
+          }
+
+          return `
+            <div class="bar-wrapper">
+              <div class="bar" data-fruit="${f.id}" style="height: ${state.chartType === 'bar' ? heightPct + '%' : '100%'}; background-color: ${f.color};">
+                ${barContent}
+              </div>
+              <div class="bar-label">${f.name}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 初始化控制事件
+      function initControls() {
+        // 拖曳來源
+        const studentDrag = document.getElementById('student-drag');
+        studentDrag?.addEventListener('dragstart', (e) => {
+          if (e.dataTransfer) {
+            e.dataTransfer.setData('text/plain', 'student');
+            e.dataTransfer.effectAllowed = 'copy';
+          }
+        });
+
+        // 排序按鈕
+        document.getElementById('sort-desc-btn')?.addEventListener('click', () => {
+          state.sortOrder = 'desc';
+          updateUI();
+        });
+        document.getElementById('sort-asc-btn')?.addEventListener('click', () => {
+          state.sortOrder = 'asc';
+          updateUI();
+        });
+
+        // 圖表類型切換
+        const btnBar = document.getElementById('toggle-bar-btn');
+        const btnPicto = document.getElementById('toggle-picto-btn');
+        
+        btnBar?.addEventListener('click', () => {
+          state.chartType = 'bar';
+          btnBar.classList.add('active');
+          btnPicto?.classList.remove('active');
+          if (state.chartActive) updateUI();
+        });
+        
+        btnPicto?.addEventListener('click', () => {
+          state.chartType = 'pictogram';
+          btnPicto.classList.add('active');
+          btnBar?.classList.remove('active');
+          if (state.chartActive) updateUI();
+        });
+
+        // 生成圖表
+        document.getElementById('generate-chart-btn')?.addEventListener('click', () => {
+          state.chartActive = true;
+          document.getElementById('chart-container')?.classList.add('active');
+          updateUI();
+          renderTask();
+        });
+      }
+
+      // 渲染互動任務 (Render Task Area)
+      function renderTask() {
+        const taskContent = document.getElementById('task-content');
+        if (!taskContent) return;
+
+        let html = '';
+        
+        if (!state.chartActive) {
+          taskContent.innerHTML = '<p style="color: #64748b;">請先在左側收集資料，並點擊「生成圖表」按鈕來解鎖任務。</p>';
+          return;
+        }
+
+        // 準備任務資料
+        const sortedByCount = [...state.fruits].sort((a, b) => b.count - a.count);
+        const maxFruit = sortedByCount[0];
+
+        switch(state.currentTask) {
+          case 1:
+            // 任務 1：哪一種水果最多？ (單選題)
+            html = `
+              <p><strong>任務 1（圖表解讀）：</strong>請問哪一種水果最多？</p>
+              <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                ${state.fruits.map(f => `<button class="task-btn task1-btn" data-fruit="${f.id}">${f.emoji} ${f.name}</button>`).join('')}
+              </div>
+              <div id="task-feedback" class="task-feedback">等待作答...</div>
+            `;
+            break;
+          case 2:
+            // 任務 2：隨機水果比較
+            if (state.task2Fruits.length === 0) {
+              // 隨機挑選兩個不同的水果
+              const shuffled = [...state.fruits].sort(() => 0.5 - Math.random());
+              state.task2Fruits = [shuffled[0], shuffled[1]];
+            }
+            const [fA, fB] = state.task2Fruits;
+            const diff = Math.abs(fA.count - fB.count);
+            const moreOrLess = fA.count >= fB.count ? '多' : '少';
+            
+            html = `
+              <p><strong>任務 2（數據比較）：</strong>${fA.name} 比 ${fB.name} ${moreOrLess}幾個？</p>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="number" id="task2-input" class="task-input" min="0" placeholder="輸入數字">
+                <button id="task2-submit" class="task-btn">送出答案</button>
+              </div>
+              <div id="task-feedback" class="task-feedback">等待作答...</div>
+            `;
+            break;
+          case 3:
+            // 任務 3：總人數
+            html = `
+              <p><strong>任務 3（資料加總）：</strong>總共有幾個人參與投票？</p>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="number" id="task3-input" class="task-input" min="0" placeholder="輸入數字">
+                <button id="task3-submit" class="task-btn">送出答案</button>
+              </div>
+              <div id="task-feedback" class="task-feedback">等待作答...</div>
+            `;
+            break;
+          case 4:
+            // 任務 4：預測
+            html = `
+              <p><strong>進階預測任務：</strong>目前資料下，如果<strong>再加入 3 個香蕉</strong>，誰會變最多？</p>
+              <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                ${state.fruits.map(f => `<button class="task-btn pred-btn" data-fruit="${f.id}">${f.emoji} ${f.name}</button>`).join('')}
+              </div>
+              <button id="task4-submit" class="task-btn" style="background: var(--primary-color); color: white;" disabled>送出預測並驗證</button>
+              <div id="task-feedback" class="task-feedback">請先選擇預測結果</div>
+            `;
+            break;
+          case 5:
+            html = `
+              <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
+                <h3 style="color: var(--primary-color); margin-top: 0;">恭喜完成所有任務！</h3>
+                <p>你已經完整體驗了「資料蒐集 -> 表格建立 -> 圖表生成 -> 數據比較與解讀」的流程！</p>
+              </div>
+            `;
+            break;
+        }
+        
+        taskContent.innerHTML = html;
+        bindTaskEvents();
+      }
+
+      // 綁定任務按鈕事件 (Bind Task Events)
+      function bindTaskEvents() {
+        const feedback = document.getElementById('task-feedback');
+        if (!feedback) return;
+        
+        if (state.currentTask === 1) {
+          document.querySelectorAll('.task1-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              const target = e.target;
+              const fruitId = target.getAttribute('data-fruit');
+              
+              const sortedByCount = [...state.fruits].sort((a, b) => b.count - a.count);
+              const maxFruit = sortedByCount[0];
+              
+              if (fruitId === maxFruit.id) {
+                feedback.textContent = '✅ 答對了！這就是數量最多的水果。';
+                feedback.className = 'task-feedback success';
+                setTimeout(() => { state.currentTask++; renderTask(); }, 2000);
+              } else {
+                feedback.textContent = '❌ 答錯了，請觀察圖表中哪一個最高/最多。';
+                feedback.className = 'task-feedback error';
+              }
+            });
+          });
+        } else if (state.currentTask === 2) {
+          document.getElementById('task2-submit')?.addEventListener('click', () => {
+            const inputEl = document.getElementById('task2-input');
+            const ans = parseInt(inputEl.value);
+            const [fA, fB] = state.task2Fruits;
+            const correct = Math.abs(fA.count - fB.count);
+            
+            if (ans === correct) {
+              feedback.textContent = '✅ 答對了！';
+              feedback.className = 'task-feedback success';
+              setTimeout(() => { state.currentTask++; renderTask(); }, 2000);
+            } else {
+              feedback.textContent = '❌ 答錯了，請再算算看。';
+              feedback.className = 'task-feedback error';
+            }
+          });
+        } else if (state.currentTask === 3) {
+          document.getElementById('task3-submit')?.addEventListener('click', () => {
+            const inputEl = document.getElementById('task3-input');
+            const ans = parseInt(inputEl.value);
+            const total = state.fruits.reduce((sum, f) => sum + f.count, 0);
+            
+            if (ans === total) {
+              feedback.textContent = '✅ 答對了！';
+              feedback.className = 'task-feedback success';
+              setTimeout(() => { state.currentTask++; renderTask(); }, 2000);
+            } else {
+              feedback.textContent = '❌ 答錯了，請把所有數量加起來。';
+              feedback.className = 'task-feedback error';
+            }
+          });
+        } else if (state.currentTask === 4) {
+          state.predictionLocked = true; // 鎖定圖表更新
+          const predBtns = document.querySelectorAll('.pred-btn');
+          const submitBtn = document.getElementById('task4-submit');
+          
+          predBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              predBtns.forEach(b => b.classList.remove('selected'));
+              const target = e.target;
+              target.classList.add('selected');
+              state.predictionAnswer = target.getAttribute('data-fruit') || '';
+              submitBtn.disabled = false;
+              const fruitName = state.fruits.find(f => f.id === state.predictionAnswer)?.name;
+              feedback.textContent = `已選擇：${fruitName}。點擊下方按鈕驗證！`;
+              feedback.className = 'task-feedback';
+            });
+          });
+          
+          submitBtn.addEventListener('click', () => {
+            submitBtn.disabled = true;
+            predBtns.forEach(b => b.disabled = true);
+            
+            // 應用 +3 香蕉的變化
+            const banana = state.fruits.find(f => f.id === 'banana');
+            if (banana) banana.count += 3;
+            
+            state.predictionLocked = false;
+            updateUI(); // 觸發圖表動畫更新
+            
+            // 驗證答案
+            const sortedByCount = [...state.fruits].sort((a, b) => b.count - a.count);
+            const maxFruit = sortedByCount[0];
+            
+            if (state.predictionAnswer === maxFruit.id) {
+              feedback.textContent = '✅ 預測正確！圖表已經更新，看看香蕉的變化！';
+              feedback.className = 'task-feedback success';
+              setTimeout(() => { state.currentTask++; renderTask(); }, 4000);
+            } else {
+              feedback.textContent = `❌ 預測錯誤。圖表已經更新，正確答案是「${maxFruit.name}」。`;
+              feedback.className = 'task-feedback error';
+              setTimeout(() => { state.currentTask++; renderTask(); }, 4000);
+            }
+          });
+        }
+      }
+
+      // 初始化應用程式
+      function init() {
+        initControls();
+        updateUI();
+        renderTask();
+      }
+
+      // 啟動
+      document.addEventListener('DOMContentLoaded', init);
+      if (document.readyState === 'interactive' || document.readyState === 'complete') {
+        init();
+      }
+    </script>
+  </body>
+</html>
+

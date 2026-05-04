@@ -1,0 +1,1276 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>有趣的幾何圖形</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      body {
+        background-color: #f3f4f6;
+        font-family: "Comic Sans MS", "Chalkboard SE", sans-serif;
+        overflow-x: hidden;
+      }
+      ::-webkit-scrollbar {
+        width: 12px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+      .wood-pattern {
+        background-image: url("https://www.transparenttextures.com/patterns/wood-pattern.png");
+      }
+      @keyframes fadeInZoom {
+        0% {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      .animate-fade-in-zoom {
+        animation: fadeInZoom 0.3s ease-out forwards;
+      }
+      @keyframes slideUpFade {
+        0% {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-slide-up-fade {
+        animation: slideUpFade 0.3s ease-out forwards;
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gray-100 text-gray-800 flex flex-col">
+    <!-- Header -->
+    <header
+      id="header"
+      class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50 hidden"
+    >
+      <div
+        class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between"
+      >
+        <button
+          onclick="app.setMode('home')"
+          class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+        >
+          <i data-lucide="arrow-left"></i>
+          <span class="font-bold">返回首頁</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-hidden relative">
+      <!-- Home Menu -->
+      <div id="view-home" class="h-full overflow-y-auto p-8">
+        <div class="max-w-6xl mx-auto pt-12">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+              有趣的幾何圖形
+            </h2>
+            <p class="text-gray-600 text-lg">
+              選擇一個工具開始探索圖形的奧秘！
+            </p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <!-- Geoboard Card -->
+            <button
+              onclick="app.setMode('geoboard')"
+              class="flex flex-col items-center text-center p-8 rounded-3xl transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl border-2 border-transparent hover:border-white/50 group bg-amber-50 hover:bg-amber-100"
+            >
+              <div
+                class="bg-white p-6 rounded-full shadow-md mb-6 group-hover:scale-110 transition-transform duration-300"
+              >
+                <i data-lucide="grid-3x3" class="w-12 h-12 text-amber-500"></i>
+              </div>
+              <div
+                class="inline-block px-3 py-1 bg-white/60 text-gray-600 text-xs font-bold rounded-full mb-3"
+              >
+                幾何基礎
+              </div>
+              <h3 class="text-2xl font-bold text-gray-800 mb-3">數位釘板</h3>
+              <p class="text-gray-600 leading-relaxed">
+                用橡皮筋拉出各種形狀，學習點、線、面的關係。
+              </p>
+            </button>
+            <!-- Slicer Card -->
+            <button
+              onclick="app.setMode('slicer')"
+              class="flex flex-col items-center text-center p-8 rounded-3xl transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl border-2 border-transparent hover:border-white/50 group bg-rose-50 hover:bg-rose-100"
+            >
+              <div
+                class="bg-white p-6 rounded-full shadow-md mb-6 group-hover:scale-110 transition-transform duration-300"
+              >
+                <i data-lucide="scissors" class="w-12 h-12 text-rose-500"></i>
+              </div>
+              <div
+                class="inline-block px-3 py-1 bg-white/60 text-gray-600 text-xs font-bold rounded-full mb-3"
+              >
+                分數與分割
+              </div>
+              <h3 class="text-2xl font-bold text-gray-800 mb-3">形狀切切樂</h3>
+              <p class="text-gray-600 leading-relaxed">
+                像忍者一樣切開圖形，電腦會幫你判斷切出了什麼形狀喔！
+              </p>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Geoboard View -->
+      <div
+        id="view-geoboard"
+        class="hidden flex-col md:flex-row gap-6 items-start justify-center p-4 h-full"
+      >
+        <!-- Controls -->
+        <div
+          class="bg-white p-6 rounded-3xl shadow-xl w-full md:w-72 space-y-6 flex-shrink-0"
+        >
+          <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+            <h3 class="text-blue-800 font-bold flex items-center gap-2 mb-2">
+              <i data-lucide="lightbulb" class="w-4 h-4"></i> 提示
+            </h3>
+            <p class="text-sm text-blue-700 leading-relaxed">
+              點擊任意釘子開始，依序連接其他釘子，最後<b>點回起點</b>即可完成圖形！
+            </p>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-gray-700 mb-2">顏色選擇</h3>
+            <div id="geo-colors" class="flex gap-2 flex-wrap"></div>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-gray-700 mb-2">工具箱</h3>
+            <div class="space-y-2">
+              <button
+                id="geo-btn-dim"
+                onclick="geoboard.toggleDimensions()"
+                class="w-full flex items-center gap-2 px-4 py-3 rounded-xl transition-colors font-bold border-2 bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100"
+              >
+                <i data-lucide="ruler" class="w-5 h-5"></i>
+                <span id="geo-text-dim">顯示底與高</span>
+              </button>
+              <button
+                onclick="geoboard.undoLast()"
+                class="w-full flex items-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-bold"
+              >
+                <i data-lucide="undo" class="w-5 h-5"></i> 復原上一步
+              </button>
+              <button
+                id="geo-btn-reset-line"
+                onclick="geoboard.resetCurrentLine()"
+                class="w-full flex items-center gap-2 px-4 py-3 bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200 transition-colors font-bold disabled:opacity-50"
+              >
+                <i data-lucide="rotate-ccw" class="w-5 h-5"></i> 重拉現在的線
+              </button>
+              <button
+                onclick="geoboard.clearBoard()"
+                class="w-full flex items-center gap-2 px-4 py-3 bg-rose-100 text-rose-700 rounded-xl hover:bg-rose-200 transition-colors font-bold"
+              >
+                <i data-lucide="trash-2" class="w-5 h-5"></i> 全部清除
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Board -->
+        <div class="flex-1 w-full flex justify-center overflow-auto">
+          <div
+            class="bg-amber-100 p-8 rounded-3xl shadow-2xl relative select-none inline-block"
+          >
+            <div
+              class="absolute inset-0 rounded-3xl opacity-10 pointer-events-none wood-pattern"
+            ></div>
+            <svg
+              id="geo-svg"
+              width="515"
+              height="515"
+              class="cursor-crosshair relative z-10"
+            ></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slicer View -->
+      <div
+        id="view-slicer"
+        class="hidden flex-col items-center justify-center h-full p-4 w-full max-w-4xl mx-auto"
+      >
+        <!-- Slicer Menu -->
+        <div
+          id="slicer-menu"
+          class="flex flex-col items-center justify-center h-full p-8 w-full max-w-5xl mx-auto"
+        >
+          <h2
+            class="text-4xl font-bold text-gray-800 mb-12 flex items-center gap-3"
+          >
+            <i data-lucide="scissors" class="w-12 h-12 text-rose-500"></i>
+            形狀切切樂
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl">
+            <button
+              onclick="slicer.startMode('challenge')"
+              class="group bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border-2 border-transparent hover:border-indigo-100 flex flex-col items-center text-center"
+            >
+              <div
+                class="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+              >
+                <i
+                  data-lucide="gamepad-2"
+                  class="w-12 h-12 text-indigo-600"
+                ></i>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-800 mb-2">闖關挑戰</h3>
+              <p class="text-gray-500">完成指定的題目，挑戰成為切割大師！</p>
+            </button>
+            <button
+              onclick="slicer.startMode('free')"
+              class="group bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border-2 border-transparent hover:border-pink-100 flex flex-col items-center text-center"
+            >
+              <div
+                class="w-24 h-24 bg-pink-100 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+              >
+                <i data-lucide="wand-2" class="w-12 h-12 text-pink-600"></i>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-800 mb-2">自由練習</h3>
+              <p class="text-gray-500">隨心所欲切切看，電腦會告訴你結果！</p>
+            </button>
+          </div>
+        </div>
+
+        <!-- Slicer Game -->
+        <div id="slicer-game" class="hidden w-full flex-col items-center">
+          <!-- Top Nav -->
+          <div class="w-full flex justify-between items-center mb-4 px-4">
+            <button
+              onclick="slicer.showMenu()"
+              class="flex items-center gap-1 text-gray-500 hover:text-gray-800 font-bold px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <i data-lucide="chevron-left" class="w-5 h-5"></i> 選單
+            </button>
+            <div
+              id="slicer-free-controls"
+              class="hidden flex bg-white rounded-lg p-1 shadow-sm border border-gray-200"
+            >
+              <button
+                id="btn-shape-square"
+                onclick="slicer.setFreeShape('square')"
+                class="px-3 py-1 rounded-md text-sm font-bold transition-colors bg-indigo-100 text-indigo-700"
+              >
+                正方形
+              </button>
+              <button
+                id="btn-shape-rect"
+                onclick="slicer.setFreeShape('rectangle')"
+                class="px-3 py-1 rounded-md text-sm font-bold transition-colors text-gray-500 hover:bg-gray-50"
+              >
+                長方形
+              </button>
+            </div>
+          </div>
+
+          <!-- Header Info -->
+          <div
+            class="bg-white p-6 rounded-3xl shadow-xl w-full text-center mb-6 relative overflow-hidden"
+          >
+            <h2
+              class="text-2xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2"
+            >
+              <span
+                id="slicer-level-badge"
+                class="hidden text-sm bg-rose-100 text-rose-600 px-2 py-1 rounded-lg"
+              ></span>
+              <span id="slicer-title"></span>
+            </h2>
+            <p id="slicer-desc" class="text-lg text-gray-600"></p>
+          </div>
+
+          <!-- Canvas Container -->
+          <div
+            id="slicer-container"
+            class="relative bg-gray-900 rounded-3xl overflow-hidden shadow-2xl cursor-crosshair select-none touch-none w-full max-w-[600px] aspect-[3/2]"
+          >
+            <canvas
+              id="slicer-canvas"
+              width="600"
+              height="400"
+              class="absolute inset-0 z-20 pointer-events-none w-full h-full"
+            ></canvas>
+
+            <!-- Hint -->
+            <div
+              id="slicer-hint"
+              class="hidden absolute top-4 left-0 right-0 z-30 flex justify-center pointer-events-none"
+            >
+              <div
+                class="bg-yellow-100/90 text-yellow-700 px-4 py-2 rounded-full shadow-lg font-bold flex items-center gap-2 animate-fade-in-zoom"
+              >
+                <i
+                  data-lucide="lightbulb"
+                  class="w-4 h-4 fill-yellow-500 text-yellow-500"
+                ></i>
+                試試看照著虛線切！
+              </div>
+            </div>
+
+            <!-- Feedback -->
+            <div
+              id="slicer-feedback"
+              class="hidden absolute top-4 left-0 right-0 z-30 flex justify-center pointer-events-none"
+            >
+              <div
+                id="slicer-feedback-text"
+                class="bg-white/90 text-rose-600 px-4 py-2 rounded-full shadow-lg font-bold flex items-center gap-2"
+              >
+                <i data-lucide="alert-circle" class="w-4 h-4"></i> <span></span>
+              </div>
+            </div>
+
+            <!-- Success UI -->
+            <div
+              id="slicer-success"
+              class="hidden absolute inset-x-0 bottom-0 z-40 p-4 animate-slide-up-fade pointer-events-none flex justify-center items-end h-full pb-4"
+            >
+              <div
+                class="bg-white/95 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-gray-200 p-6 rounded-3xl flex flex-col items-center pointer-events-auto max-w-md w-full"
+              >
+                <div class="flex items-center gap-3 mb-4">
+                  <i
+                    data-lucide="trophy"
+                    class="w-8 h-8 text-yellow-500 fill-yellow-500"
+                  ></i>
+                  <h3
+                    id="slicer-success-text"
+                    class="text-xl font-bold text-gray-800"
+                  ></h3>
+                </div>
+                <div class="flex gap-3 w-full" id="slicer-success-buttons">
+                  <button
+                    onclick="slicer.resetLevel()"
+                    class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 flex items-center justify-center gap-2 transition-colors border-2 border-gray-200 hover:border-gray-300"
+                  >
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> 再切一次
+                  </button>
+                  <!-- Next buttons injected dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Initialize Lucide Icons
+      lucide.createIcons();
+
+      // --- App State ---
+      const app = {
+        setMode(mode) {
+          document.getElementById("view-home").classList.add("hidden");
+          document.getElementById("view-geoboard").classList.add("hidden");
+          document.getElementById("view-slicer").classList.add("hidden");
+          document.getElementById("header").classList.remove("hidden");
+
+          if (mode === "home") {
+            document.getElementById("view-home").classList.remove("hidden");
+            document.getElementById("header").classList.add("hidden");
+          } else if (mode === "geoboard") {
+            document.getElementById("view-geoboard").classList.remove("hidden");
+            document.getElementById("view-geoboard").classList.add("flex");
+            geoboard.render();
+          } else if (mode === "slicer") {
+            document.getElementById("view-slicer").classList.remove("hidden");
+            document.getElementById("view-slicer").classList.add("flex");
+            slicer.showMenu();
+          }
+        },
+      };
+
+      // --- Geoboard Logic ---
+      const geoboard = {
+        GRID_SIZE: 14,
+        CELL_SIZE: 35,
+        DOT_RADIUS: 4,
+        OFFSET: 30,
+        COLORS: ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7"],
+
+        bands: [],
+        currentPoints: [],
+        activeColor: "#3b82f6",
+        showDimensions: false,
+        mousePos: { x: 0, y: 0 },
+        points: [],
+        svg: null,
+
+        init() {
+          this.svg = document.getElementById("geo-svg");
+
+          // Generate points
+          for (let row = 0; row < this.GRID_SIZE; row++) {
+            for (let col = 0; col < this.GRID_SIZE; col++) {
+              this.points.push({
+                id: row * this.GRID_SIZE + col,
+                x: col * this.CELL_SIZE + this.OFFSET,
+                y: row * this.CELL_SIZE + this.OFFSET,
+              });
+            }
+          }
+
+          // Setup color buttons
+          const colorContainer = document.getElementById("geo-colors");
+          this.COLORS.forEach((c) => {
+            const btn = document.createElement("button");
+            btn.className = `w-10 h-10 rounded-full border-4 transition-transform hover:scale-110 ${this.activeColor === c ? "border-gray-800 scale-110" : "border-transparent"}`;
+            btn.style.backgroundColor = c;
+            btn.onclick = () => {
+              this.activeColor = c;
+              Array.from(colorContainer.children).forEach((b) => {
+                b.classList.remove("border-gray-800", "scale-110");
+                b.classList.add("border-transparent");
+              });
+              btn.classList.add("border-gray-800", "scale-110");
+              btn.classList.remove("border-transparent");
+            };
+            colorContainer.appendChild(btn);
+          });
+
+          // Mouse tracking
+          this.svg.addEventListener("mousemove", (e) => {
+            const pt = this.svg.createSVGPoint();
+            pt.x = e.clientX;
+            pt.y = e.clientY;
+            const svgP = pt.matrixTransform(this.svg.getScreenCTM().inverse());
+            this.mousePos = { x: svgP.x, y: svgP.y };
+            if (this.currentPoints.length > 0) this.render();
+          });
+        },
+
+        handleDotClick(pointId) {
+          if (this.currentPoints.length === 0) {
+            this.currentPoints = [pointId];
+          } else if (
+            pointId === this.currentPoints[0] &&
+            this.currentPoints.length > 2
+          ) {
+            this.bands.push({
+              id: Date.now().toString(),
+              points: [...this.currentPoints],
+              color: this.activeColor,
+            });
+            this.currentPoints = [];
+          } else if (!this.currentPoints.includes(pointId)) {
+            this.currentPoints.push(pointId);
+          }
+          this.render();
+        },
+
+        clearBoard() {
+          if (confirm("確定要清空釘板嗎？")) {
+            this.bands = [];
+            this.currentPoints = [];
+            this.render();
+          }
+        },
+
+        undoLast() {
+          if (this.currentPoints.length > 0) {
+            this.currentPoints.pop();
+          } else if (this.bands.length > 0) {
+            this.bands.pop();
+          }
+          this.render();
+        },
+
+        resetCurrentLine() {
+          this.currentPoints = [];
+          this.render();
+        },
+
+        toggleDimensions() {
+          this.showDimensions = !this.showDimensions;
+          const btn = document.getElementById("geo-btn-dim");
+          const text = document.getElementById("geo-text-dim");
+          if (this.showDimensions) {
+            btn.className =
+              "w-full flex items-center gap-2 px-4 py-3 rounded-xl transition-colors font-bold border-2 bg-indigo-100 border-indigo-300 text-indigo-700";
+            text.innerText = "隱藏尺寸";
+          } else {
+            btn.className =
+              "w-full flex items-center gap-2 px-4 py-3 rounded-xl transition-colors font-bold border-2 bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100";
+            text.innerText = "顯示底與高";
+          }
+          this.render();
+        },
+
+        getCoord(id) {
+          return this.points.find((p) => p.id === id);
+        },
+
+        calculateArea(pointIds) {
+          if (pointIds.length < 3) return 0;
+          let sum = 0;
+          for (let i = 0; i < pointIds.length; i++) {
+            const p1 = this.getCoord(pointIds[i]);
+            const p2 = this.getCoord(pointIds[(i + 1) % pointIds.length]);
+            if (p1 && p2) {
+              const x1 = (p1.x - this.OFFSET) / this.CELL_SIZE;
+              const y1 = (p1.y - this.OFFSET) / this.CELL_SIZE;
+              const x2 = (p2.x - this.OFFSET) / this.CELL_SIZE;
+              const y2 = (p2.y - this.OFFSET) / this.CELL_SIZE;
+              sum += x1 * y2 - x2 * y1;
+            }
+          }
+          return Math.abs(sum) / 2;
+        },
+
+        calculateDistance(p1, p2) {
+          const dx = (p2.x - p1.x) / this.CELL_SIZE;
+          const dy = (p2.y - p1.y) / this.CELL_SIZE;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          return Number.isInteger(dist) ? dist : dist.toFixed(1);
+        },
+
+        getBoundingBox(pointIds) {
+          let minX = Infinity,
+            maxX = -Infinity,
+            minY = Infinity,
+            maxY = -Infinity;
+          pointIds.forEach((id) => {
+            const p = this.getCoord(id);
+            if (p) {
+              if (p.x < minX) minX = p.x;
+              if (p.x > maxX) maxX = p.x;
+              if (p.y < minY) minY = p.y;
+              if (p.y > maxY) maxY = p.y;
+            }
+          });
+          return {
+            minX,
+            maxX,
+            minY,
+            maxY,
+            width: Math.round((maxX - minX) / this.CELL_SIZE),
+            height: Math.round((maxY - minY) / this.CELL_SIZE),
+            midX: (minX + maxX) / 2,
+            midY: (minY + maxY) / 2,
+          };
+        },
+
+        render() {
+          if (!this.svg) return;
+
+          // Update button state
+          document.getElementById("geo-btn-reset-line").disabled =
+            this.currentPoints.length === 0;
+
+          let html = "";
+
+          // Layer 1: Completed Bands
+          this.bands.forEach((band) => {
+            const pathData =
+              band.points
+                .map((id, index) => {
+                  const p = this.getCoord(id);
+                  return p ? `${index === 0 ? "M" : "L"} ${p.x} ${p.y}` : "";
+                })
+                .join(" ") + " Z";
+
+            html += `<path d="${pathData}" fill="${band.color}" fill-opacity="0.3" stroke="${band.color}" stroke-width="4" stroke-linejoin="round" />`;
+
+            if (this.showDimensions) {
+              const box = this.getBoundingBox(band.points);
+              html += `
+                            <g pointer-events="none">
+                                <rect x="${box.minX - 5}" y="${box.minY - 5}" width="${box.maxX - box.minX + 10}" height="${box.maxY - box.minY + 10}" fill="none" stroke="#666" stroke-dasharray="4 4" stroke-width="1" opacity="0.6" />
+                                <text x="${box.midX}" y="${box.minY - 15}" text-anchor="middle" fill="#444" font-size="12" font-weight="bold">寬(底): ${box.width}</text>
+                                <text x="${box.maxX + 15}" y="${box.midY}" text-anchor="start" dominant-baseline="middle" fill="#444" font-size="12" font-weight="bold">高: ${box.height}</text>
+                        `;
+              band.points.forEach((id, i) => {
+                const nextId = band.points[(i + 1) % band.points.length];
+                const p1 = this.getCoord(id);
+                const p2 = this.getCoord(nextId);
+                if (p1 && p2) {
+                  const dist = this.calculateDistance(p1, p2);
+                  const midX = (p1.x + p2.x) / 2;
+                  const midY = (p1.y + p2.y) / 2;
+                  html += `
+                                    <g>
+                                        <rect x="${midX - 10}" y="${midY - 8}" width="20" height="16" fill="rgba(255,255,255,0.8)" rx="4" />
+                                        <text x="${midX}" y="${midY}" dy="4" text-anchor="middle" font-size="10" fill="#000" font-weight="bold">${dist}</text>
+                                    </g>
+                                `;
+                }
+              });
+              html += `</g>`;
+            }
+          });
+
+          // Layer 2: Current Line
+          if (this.currentPoints.length > 0) {
+            const pathData = this.currentPoints
+              .map((id, i) => {
+                const p = this.getCoord(id);
+                return p ? `${i === 0 ? "M" : "L"} ${p.x} ${p.y}` : "";
+              })
+              .join(" ");
+            html += `<path d="${pathData}" fill="none" stroke="${this.activeColor}" stroke-width="4" stroke-linecap="round" />`;
+
+            const lastP = this.getCoord(
+              this.currentPoints[this.currentPoints.length - 1],
+            );
+            if (lastP) {
+              html += `<line x1="${lastP.x}" y1="${lastP.y}" x2="${this.mousePos.x}" y2="${this.mousePos.y}" stroke="${this.activeColor}" stroke-width="4" stroke-dasharray="8 4" opacity="0.6" />`;
+            }
+          }
+
+          // Layer 3: Pins
+          this.points.forEach((p) => {
+            const isStart =
+              this.currentPoints.length > 0 && this.currentPoints[0] === p.id;
+            const isSelected = this.currentPoints.includes(p.id);
+
+            html += `<g onclick="geoboard.handleDotClick(${p.id})" class="cursor-pointer transition-all hover:opacity-80">
+                        <circle cx="${p.x}" cy="${p.y}" r="12" fill="transparent" />
+                        <circle cx="${p.x}" cy="${p.y}" r="${this.DOT_RADIUS}" fill="#4b5563" />`;
+
+            if (isStart && this.currentPoints.length > 2) {
+              html += `<circle cx="${p.x}" cy="${p.y}" r="${this.DOT_RADIUS + 6}" stroke="${this.activeColor}" stroke-width="3" fill="none" class="animate-pulse" />`;
+            }
+            if (isSelected && !isStart) {
+              html += `<circle cx="${p.x}" cy="${p.y}" r="${this.DOT_RADIUS + 3}" fill="${this.activeColor}" opacity="0.5" />`;
+            }
+            html += `</g>`;
+          });
+
+          // Layer 4: Area Labels
+          this.bands.forEach((band) => {
+            const area = this.calculateArea(band.points);
+            const center = this.getBoundingBox(band.points);
+            html += `
+                        <g style="pointer-events: none;">
+                            <circle cx="${center.midX}" cy="${center.midY}" r="16" fill="white" stroke="${band.color}" stroke-width="2" />
+                            <text x="${center.midX}" y="${center.midY - 4}" text-anchor="middle" dominant-baseline="central" fill="${band.color}" font-weight="bold" font-size="10">面積</text>
+                            <text x="${center.midX}" y="${center.midY + 7}" text-anchor="middle" dominant-baseline="central" fill="${band.color}" font-weight="bold" font-size="12">${area}</text>
+                        </g>
+                    `;
+          });
+
+          this.svg.innerHTML = html;
+        },
+      };
+
+      // --- Slicer Logic ---
+      const slicer = {
+        CHALLENGE_LEVELS: [
+          {
+            id: 1,
+            name: "第一關：切成三角形",
+            instruction: "把正方形切一刀，變成兩個三角形！",
+            shapeType: "square",
+            cutType: "diagonal",
+          },
+          {
+            id: 2,
+            name: "第二關：切成正方形",
+            instruction: "把長方形切一刀，變成兩個正方形！",
+            shapeType: "rectangle",
+            cutType: "vertical",
+          },
+          {
+            id: 3,
+            name: "第三關：切出梯形",
+            instruction: "試著切一刀，讓其中一塊變成梯形！",
+            shapeType: "square",
+            cutType: "any",
+            checkFn: (r) => r.includes("梯形"),
+          },
+          {
+            id: 4,
+            name: "第四關：切出五邊形",
+            instruction: "試著切一刀，讓其中一塊變成五邊形！",
+            shapeType: "square",
+            cutType: "any",
+            checkFn: (r) => r.includes("五邊形"),
+          },
+          {
+            id: 5,
+            name: "第五關：切成兩個長方形",
+            instruction: "試著把正方形切一刀，變成兩個長方形！",
+            shapeType: "square",
+            cutType: "vertical",
+            checkFn: (r) => r[0] === "長方形" && r[1] === "長方形",
+          },
+        ],
+
+        mode: "menu", // 'menu', 'challenge', 'free'
+        levelIndex: 0,
+        freeShape: "square",
+        failedAttempts: 0,
+
+        isDrawing: false,
+        startPoint: null,
+        endPoint: null,
+        levelComplete: false,
+        slicedPieces: null,
+        finalCutLine: null,
+
+        canvas: null,
+        ctx: null,
+        container: null,
+        CW: 600,
+        CH: 400,
+
+        init() {
+          this.canvas = document.getElementById("slicer-canvas");
+          this.ctx = this.canvas.getContext("2d");
+          this.container = document.getElementById("slicer-container");
+
+          const handleStart = (e) => {
+            if (this.levelComplete) {
+              if (
+                this.mode === "challenge" &&
+                this.levelIndex >= this.CHALLENGE_LEVELS.length - 1
+              ) {
+                this.showMenu();
+              } else {
+                this.nextLevel();
+              }
+              return;
+            }
+            this.hideFeedback();
+            this.isDrawing = true;
+            const coords = this.getCanvasCoords(e);
+            this.startPoint = coords;
+            this.endPoint = coords;
+            this.draw();
+          };
+
+          const handleMove = (e) => {
+            if (!this.isDrawing || !this.startPoint) return;
+            this.endPoint = this.getCanvasCoords(e);
+            this.draw();
+          };
+
+          const handleEnd = () => {
+            if (!this.isDrawing) return;
+            this.isDrawing = false;
+            if (this.startPoint && this.endPoint) {
+              const dx = this.endPoint.x - this.startPoint.x;
+              const dy = this.endPoint.y - this.startPoint.y;
+              if (Math.sqrt(dx * dx + dy * dy) > 5) {
+                this.processCut(this.startPoint, this.endPoint);
+              }
+            }
+            this.draw();
+          };
+
+          this.container.addEventListener("mousedown", handleStart);
+          this.container.addEventListener("mousemove", handleMove);
+          window.addEventListener("mouseup", handleEnd);
+
+          this.container.addEventListener("touchstart", handleStart, {
+            passive: false,
+          });
+          this.container.addEventListener(
+            "touchmove",
+            (e) => {
+              e.preventDefault();
+              handleMove(e);
+            },
+            { passive: false },
+          );
+          window.addEventListener("touchend", handleEnd);
+        },
+
+        showMenu() {
+          this.mode = "menu";
+          document.getElementById("slicer-menu").classList.remove("hidden");
+          document.getElementById("slicer-game").classList.add("hidden");
+          document.getElementById("slicer-game").classList.remove("flex");
+        },
+
+        startMode(mode) {
+          this.mode = mode;
+          this.levelIndex = 0;
+          document.getElementById("slicer-menu").classList.add("hidden");
+          document.getElementById("slicer-game").classList.remove("hidden");
+          document.getElementById("slicer-game").classList.add("flex");
+
+          if (mode === "free") {
+            document
+              .getElementById("slicer-free-controls")
+              .classList.remove("hidden");
+            document
+              .getElementById("slicer-level-badge")
+              .classList.add("hidden");
+          } else {
+            document
+              .getElementById("slicer-free-controls")
+              .classList.add("hidden");
+            document
+              .getElementById("slicer-level-badge")
+              .classList.remove("hidden");
+          }
+
+          this.resetLevel();
+        },
+
+        setFreeShape(shape) {
+          this.freeShape = shape;
+          document.getElementById("btn-shape-square").className =
+            `px-3 py-1 rounded-md text-sm font-bold transition-colors ${shape === "square" ? "bg-indigo-100 text-indigo-700" : "text-gray-500 hover:bg-gray-50"}`;
+          document.getElementById("btn-shape-rect").className =
+            `px-3 py-1 rounded-md text-sm font-bold transition-colors ${shape === "rectangle" ? "bg-indigo-100 text-indigo-700" : "text-gray-500 hover:bg-gray-50"}`;
+          this.resetLevel();
+        },
+
+        getCurrentLevel() {
+          if (this.mode === "challenge")
+            return this.CHALLENGE_LEVELS[this.levelIndex];
+          return {
+            id: 999,
+            name: "自由切切樂",
+            instruction: "隨意切一刀，電腦會告訴你切出了什麼形狀！",
+            shapeType: this.freeShape,
+            cutType: "any",
+          };
+        },
+
+        resetLevel() {
+          this.levelComplete = false;
+          this.startPoint = null;
+          this.endPoint = null;
+          this.slicedPieces = null;
+          this.finalCutLine = null;
+          this.failedAttempts = 0;
+          this.hideFeedback();
+          document.getElementById("slicer-success").classList.add("hidden");
+
+          const lvl = this.getCurrentLevel();
+          document.getElementById("slicer-title").innerText = lvl.name;
+          document.getElementById("slicer-desc").innerText = lvl.instruction;
+          if (this.mode === "challenge") {
+            document.getElementById("slicer-level-badge").innerText =
+              `關卡 ${this.levelIndex + 1}/${this.CHALLENGE_LEVELS.length}`;
+          }
+
+          this.draw();
+        },
+
+        nextLevel() {
+          if (
+            this.mode === "challenge" &&
+            this.levelIndex < this.CHALLENGE_LEVELS.length - 1
+          ) {
+            this.levelIndex++;
+            this.resetLevel();
+          } else if (this.mode === "challenge") {
+            this.showMenu();
+          } else {
+            this.resetLevel();
+          }
+        },
+
+        showFeedback(msg) {
+          const el = document.getElementById("slicer-feedback");
+          document.getElementById("slicer-feedback-text").innerHTML =
+            `<i data-lucide="alert-circle" class="w-4 h-4"></i> <span>${msg}</span>`;
+          lucide.createIcons({ root: el });
+          el.classList.remove("hidden");
+        },
+
+        hideFeedback() {
+          document.getElementById("slicer-feedback").classList.add("hidden");
+        },
+
+        getCanvasCoords(e) {
+          const rect = this.canvas.getBoundingClientRect();
+          let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          return {
+            x: (clientX - rect.left) * (this.CW / rect.width),
+            y: (clientY - rect.top) * (this.CH / rect.height),
+          };
+        },
+
+        getShapeDimensions() {
+          const lvl = this.getCurrentLevel();
+          const w = lvl.shapeType === "square" ? 200 : 300;
+          const h = lvl.shapeType === "square" ? 200 : 150;
+          const left = (this.CW - w) / 2;
+          const top = (this.CH - h) / 2 - 40;
+          return {
+            left,
+            top,
+            right: left + w,
+            bottom: top + h,
+            width: w,
+            height: h,
+          };
+        },
+
+        getHintLine() {
+          if (this.mode !== "challenge") return null;
+          const dims = this.getShapeDimensions();
+          switch (this.levelIndex) {
+            case 0:
+              return {
+                start: { x: dims.left, y: dims.top },
+                end: { x: dims.right, y: dims.bottom },
+              };
+            case 1:
+              return {
+                start: { x: dims.left + dims.width / 2, y: dims.top },
+                end: { x: dims.left + dims.width / 2, y: dims.bottom },
+              };
+            case 2:
+              return {
+                start: { x: dims.left + dims.width * 0.3, y: dims.top },
+                end: { x: dims.left + dims.width * 0.7, y: dims.bottom },
+              };
+            case 3:
+              return {
+                start: { x: dims.left, y: dims.top + dims.height * 0.3 },
+                end: { x: dims.left + dims.width * 0.3, y: dims.top },
+              };
+            case 4:
+              return {
+                start: { x: dims.left + dims.width / 2, y: dims.top },
+                end: { x: dims.left + dims.width / 2, y: dims.bottom },
+              };
+            default:
+              return null;
+          }
+        },
+
+        getSegmentIntersection(p1, p2, p3, p4) {
+          const det =
+            (p2.x - p1.x) * (p4.y - p3.y) - (p4.x - p3.x) * (p2.y - p1.y);
+          if (det === 0) return null;
+          const t =
+            ((p3.x - p1.x) * (p4.y - p3.y) - (p4.x - p3.x) * (p3.y - p1.y)) /
+            det;
+          const u =
+            ((p3.x - p1.x) * (p2.y - p1.y) - (p2.x - p1.x) * (p3.y - p1.y)) /
+            det;
+          if (u >= 0 && u <= 1)
+            return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+          return null;
+        },
+
+        identifyShape(points) {
+          if (points.length === 3) return "三角形";
+          if (points.length === 4) {
+            let axisAlignedEdges = 0;
+            for (let i = 0; i < 4; i++) {
+              const pA = points[i];
+              const pB = points[(i + 1) % 4];
+              if (Math.abs(pA.x - pB.x) < 10 || Math.abs(pA.y - pB.y) < 10)
+                axisAlignedEdges++;
+            }
+            if (axisAlignedEdges >= 4) return "長方形";
+            return "梯形";
+          }
+          if (points.length === 5) return "五邊形";
+          return "多邊形";
+        },
+
+        processCut(pStart, pEnd) {
+          const { left, top, right, bottom } = this.getShapeDimensions();
+          const corners = [
+            { x: left, y: top },
+            { x: right, y: top },
+            { x: right, y: bottom },
+            { x: left, y: bottom },
+          ];
+          const edges = [
+            { start: corners[0], end: corners[1], name: "top" },
+            { start: corners[1], end: corners[2], name: "right" },
+            { start: corners[2], end: corners[3], name: "bottom" },
+            { start: corners[3], end: corners[0], name: "left" },
+          ];
+
+          const intersections = [];
+          edges.forEach((edge, idx) => {
+            const hit = this.getSegmentIntersection(
+              pStart,
+              pEnd,
+              edge.start,
+              edge.end,
+            );
+            if (hit) {
+              const isDup = intersections.some(
+                (i) =>
+                  Math.abs(i.point.x - hit.x) < 1 &&
+                  Math.abs(i.point.y - hit.y) < 1,
+              );
+              if (!isDup) intersections.push({ point: hit, edgeIndex: idx });
+            }
+          });
+
+          if (intersections.length !== 2) {
+            this.showFeedback("沒切到喔！請試著切過圖形");
+            this.failedAttempts++;
+            this.draw();
+            return;
+          }
+
+          intersections.sort((a, b) => a.edgeIndex - b.edgeIndex);
+          const hit1 = intersections[0];
+          const hit2 = intersections[1];
+
+          const poly1 = [hit1.point];
+          let idx = hit1.edgeIndex;
+          while (idx !== hit2.edgeIndex) {
+            poly1.push(corners[(idx + 1) % 4]);
+            idx = (idx + 1) % 4;
+          }
+          poly1.push(hit2.point);
+
+          const poly2 = [hit2.point];
+          idx = hit2.edgeIndex;
+          while (idx !== hit1.edgeIndex) {
+            poly2.push(corners[(idx + 1) % 4]);
+            idx = (idx + 1) % 4;
+          }
+          poly2.push(hit1.point);
+
+          let name1 = this.identifyShape(poly1);
+          let name2 = this.identifyShape(poly2);
+
+          if (name1 === "長方形") {
+            const w =
+              Math.abs(poly1[0].x - poly1[1].x) ||
+              Math.abs(poly1[0].x - poly1[2].x);
+            const h =
+              Math.abs(poly1[0].y - poly1[1].y) ||
+              Math.abs(poly1[0].y - poly1[2].y);
+            if (Math.abs(w - h) < 10) name1 = "正方形";
+          }
+          if (name2 === "長方形") {
+            const w =
+              Math.abs(poly2[0].x - poly2[1].x) ||
+              Math.abs(poly2[0].x - poly2[2].x);
+            const h =
+              Math.abs(poly2[0].y - poly2[1].y) ||
+              Math.abs(poly2[0].y - poly2[2].y);
+            if (Math.abs(w - h) < 10) name2 = "正方形";
+          }
+
+          const results = [name1, name2];
+          const lvl = this.getCurrentLevel();
+
+          let passed = false;
+          if (this.mode === "free") {
+            passed = true;
+          } else {
+            if (lvl.checkFn) {
+              passed = lvl.checkFn(results);
+            } else {
+              if (lvl.id === 1 && results.includes("三角形")) passed = true;
+              else if (lvl.id === 2 && results.includes("正方形"))
+                passed = true;
+              else if (lvl.cutType === "any") passed = true;
+            }
+          }
+
+          if (passed) {
+            const cutDx = hit2.point.x - hit1.point.x;
+            const cutDy = hit2.point.y - hit1.point.y;
+            const len = Math.sqrt(cutDx * cutDx + cutDy * cutDy);
+            const nx = -cutDy / len;
+            const ny = cutDx / len;
+            const GAP = 90;
+
+            this.slicedPieces = [
+              {
+                points: poly1,
+                offset: { x: nx * GAP, y: ny * GAP },
+                color: lvl.shapeType === "square" ? "#10b981" : "#0ea5e9",
+              },
+              {
+                points: poly2,
+                offset: { x: -nx * GAP, y: -ny * GAP },
+                color: lvl.shapeType === "square" ? "#34d399" : "#38bdf8",
+              },
+            ];
+            this.finalCutLine = { start: hit1.point, end: hit2.point };
+
+            document.getElementById("slicer-success-text").innerText =
+              this.mode === "challenge"
+                ? "恭喜過關！"
+                : `切出了：${name1} 和 ${name2}`;
+
+            // Setup success buttons
+            let btnsHtml = `<button onclick="slicer.resetLevel()" class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 flex items-center justify-center gap-2 transition-colors border-2 border-gray-200 hover:border-gray-300"><i data-lucide="refresh-cw" class="w-4 h-4"></i> 再切一次</button>`;
+
+            if (
+              this.mode === "challenge" &&
+              this.levelIndex < this.CHALLENGE_LEVELS.length - 1
+            ) {
+              btnsHtml += `<button onclick="slicer.nextLevel()" class="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-600 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-indigo-200">下一關 <i data-lucide="arrow-right" class="w-4 h-4"></i></button>`;
+            } else if (this.mode === "challenge") {
+              btnsHtml += `<button onclick="slicer.showMenu()" class="flex-1 px-4 py-3 bg-yellow-400 text-yellow-900 rounded-xl font-bold hover:bg-yellow-500 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-yellow-200">完成挑戰 <i data-lucide="arrow-right" class="w-4 h-4"></i></button>`;
+            }
+
+            document.getElementById("slicer-success-buttons").innerHTML =
+              btnsHtml;
+            lucide.createIcons({
+              root: document.getElementById("slicer-success-buttons"),
+            });
+
+            document
+              .getElementById("slicer-success")
+              .classList.remove("hidden");
+            this.levelComplete = true;
+            this.failedAttempts = 0;
+          } else {
+            this.showFeedback("還差一點！試著調整角度或位置");
+            this.failedAttempts++;
+          }
+        },
+
+        draw() {
+          if (!this.ctx) return;
+          this.ctx.clearRect(0, 0, this.CW, this.CH);
+          const lvl = this.getCurrentLevel();
+
+          if (this.slicedPieces && this.levelComplete) {
+            this.slicedPieces.forEach((piece) => {
+              this.ctx.save();
+              this.ctx.translate(piece.offset.x, piece.offset.y);
+              this.ctx.beginPath();
+              if (piece.points.length > 0) {
+                this.ctx.moveTo(piece.points[0].x, piece.points[0].y);
+                for (let i = 1; i < piece.points.length; i++)
+                  this.ctx.lineTo(piece.points[i].x, piece.points[i].y);
+              }
+              this.ctx.closePath();
+              this.ctx.fillStyle = piece.color;
+              this.ctx.fill();
+              this.ctx.lineWidth = 4;
+              this.ctx.strokeStyle = "#fff";
+              this.ctx.stroke();
+              this.ctx.shadowColor = "rgba(0,0,0,0.2)";
+              this.ctx.shadowBlur = 10;
+              this.ctx.restore();
+            });
+
+            if (this.finalCutLine) {
+              this.ctx.beginPath();
+              this.ctx.moveTo(
+                this.finalCutLine.start.x,
+                this.finalCutLine.start.y,
+              );
+              this.ctx.lineTo(this.finalCutLine.end.x, this.finalCutLine.end.y);
+              this.ctx.strokeStyle = "#FCD34D";
+              this.ctx.lineWidth = 4;
+              this.ctx.setLineDash([8, 6]);
+              this.ctx.stroke();
+              this.ctx.setLineDash([]);
+              this.ctx.fillStyle = "#FCD34D";
+              this.ctx.beginPath();
+              this.ctx.arc(
+                this.finalCutLine.start.x,
+                this.finalCutLine.start.y,
+                5,
+                0,
+                Math.PI * 2,
+              );
+              this.ctx.arc(
+                this.finalCutLine.end.x,
+                this.finalCutLine.end.y,
+                5,
+                0,
+                Math.PI * 2,
+              );
+              this.ctx.fill();
+            }
+          } else {
+            const { left, top, width, height } = this.getShapeDimensions();
+            this.ctx.fillStyle =
+              lvl.shapeType === "square" ? "#10b981" : "#0ea5e9";
+            this.ctx.shadowColor = "rgba(0,0,0,0.1)";
+            this.ctx.shadowBlur = 20;
+            this.ctx.fillRect(left, top, width, height);
+            this.ctx.shadowColor = "transparent";
+
+            if (this.mode === "challenge" && this.failedAttempts >= 3) {
+              document.getElementById("slicer-hint").classList.remove("hidden");
+              const hint = this.getHintLine();
+              if (hint) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(hint.start.x, hint.start.y);
+                this.ctx.lineTo(hint.end.x, hint.end.y);
+                this.ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+                this.ctx.lineWidth = 3;
+                this.ctx.setLineDash([10, 10]);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+              }
+            } else {
+              document.getElementById("slicer-hint").classList.add("hidden");
+            }
+          }
+
+          if (this.isDrawing && this.startPoint && this.endPoint) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.startPoint.x, this.startPoint.y);
+            this.ctx.lineTo(this.endPoint.x, this.endPoint.y);
+            this.ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+            this.ctx.lineWidth = 4;
+            this.ctx.setLineDash([5, 5]);
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.startPoint.x, this.startPoint.y);
+            this.ctx.lineTo(this.endPoint.x, this.endPoint.y);
+            this.ctx.strokeStyle = "#ffffff";
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+
+            this.ctx.fillStyle = "#ffffff";
+            this.ctx.beginPath();
+            this.ctx.arc(
+              this.startPoint.x,
+              this.startPoint.y,
+              6,
+              0,
+              Math.PI * 2,
+            );
+            this.ctx.fill();
+            this.ctx.strokeStyle = "rgba(0,0,0,0.1)";
+            this.ctx.lineWidth = 1;
+            this.ctx.stroke();
+          }
+        },
+      };
+
+      // Initialize everything
+      window.onload = () => {
+        geoboard.init();
+        slicer.init();
+      };
+    </script>
+  </body>
+</html>

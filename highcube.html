@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>建築方塊實驗室 (3D Volume Lab)</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --secondary: #f39c12;
+            --success: #2ecc71;
+            --bg-color: #f0f4f8;
+            --panel-bg: #ffffff;
+            --text-main: #2c3e50;
+            --text-muted: #7f8c8d;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* 佈局：左中右三欄 */
+        .panel {
+            height: 100%;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .left-panel {
+            width: 28%;
+            background: var(--panel-bg);
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .middle-panel {
+            width: 44%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: radial-gradient(circle, #ffffff 0%, #e2e8f0 100%);
+        }
+
+        .right-panel {
+            width: 28%;
+            background: var(--panel-bg);
+            box-shadow: -4px 0 15px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        /* 標題與文字 */
+        h1, h2, h3 {
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            text-align: center;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 16px;
+        }
+
+        p {
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        /* 按鈕樣式 */
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+            font-weight: bold;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #357abd;
+            transform: translateY(-2px);
+        }
+
+        button.active {
+            background-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.3);
+        }
+
+        button.danger {
+            background-color: #e74c3c;
+        }
+        button.danger:hover { background-color: #c0392b; }
+
+        button.water-btn {
+            background-color: #3498db;
+            margin-top: auto;
+            font-size: 1.1rem;
+            padding: 16px;
+        }
+        button.water-btn:hover { background-color: #2980b9; }
+
+        /* 任務提示區 */
+        .task-box {
+            background-color: #e8f4f8;
+            border-left: 4px solid var(--primary);
+            padding: 16px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 20px;
+        }
+
+        .instruction {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        /* 數學解析區 */
+        .math-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #ccc;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 1.4rem;
+        }
+
+        .formula-box {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .formula-box.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Canvas */
+        canvas {
+            cursor: pointer;
+            max-width: 100%;
+        }
+
+        /* 水箱動畫文字 */
+        #water-text {
+            position: absolute;
+            top: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2980b9;
+            background: rgba(255,255,255,0.8);
+            padding: 10px 20px;
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 左側：任務與控制區 -->
+    <div class="panel left-panel">
+        <h1>🧪 建築方塊實驗室</h1>
+        
+        <div class="instruction">
+            💡 <strong>操作說明：</strong><br>
+            - 點擊底座網格放置方塊。<br>
+            - 點擊已有方塊的上方可繼續疊高 (最高 5 層)。<br>
+            - 點擊右鍵或 Shift+點擊 可移除最上層方塊。
+        </div>
+
+        <h3>選擇任務模式</h3>
+        <button id="btn-task1" class="task-btn active" onclick="setTask(1)">🎯 任務一：指定體積</button>
+        <button id="btn-task2" class="task-btn" onclick="setTask(2)">🎯 任務二：空間變形</button>
+        <button id="btn-task3" class="task-btn" onclick="setTask(3)">🎯 任務三：公式推導</button>
+        <button id="btn-task4" class="task-btn" onclick="setTask(4)">🎯 任務四：水箱驗證</button>
+
+        <div class="task-box" id="task-desc">
+            請在盤面上堆出體積剛好是 12 的長方體。
+        </div>
+
+        <button class="danger" onclick="clearBlocks()">🗑️ 清除重置</button>
+        <button class="water-btn" id="btn-water" onclick="startWaterAnimation()" style="display: none;">💧 放入水箱驗證</button>
+    </div>
+
+    <!-- 中間：建築互動區 -->
+    <div class="panel middle-panel">
+        <div id="water-text">水位上升了 0 個單位！</div>
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+    </div>
+
+    <!-- 右側：數學解析區 -->
+    <div class="panel right-panel">
+        <h2>📊 數學解析區</h2>
+        
+        <div class="math-card">
+            <div class="stat-row">
+                <span>長 (X 軸)：</span>
+                <span id="stat-l">0</span>
+            </div>
+            <div class="stat-row">
+                <span>寬 (Y 軸)：</span>
+                <span id="stat-w">0</span>
+            </div>
+            <div class="stat-row">
+                <span>高 (Z 軸)：</span>
+                <span id="stat-h">0</span>
+            </div>
+            <div class="stat-row">
+                <span>總方塊數 (體積)：</span>
+                <span id="stat-total">0</span>
+            </div>
+        </div>
+
+        <div class="formula-box" id="formula-box">
+            長 × 寬 × 高 = 總體積<br>
+            <span id="formula-numbers">0 × 0 × 0 = 0</span>
+        </div>
+
+        <div id="feedback-msg" style="margin-top: 20px; font-weight: bold; color: var(--success); text-align: center; font-size: 1.2rem;"></div>
+    </div>
+
+<script>
+/**
+ * ==========================================
+ * 核心邏輯與等角透視 (Isometric Math) 實作
+ * ==========================================
+ * 
+ * 在 2D Canvas 上繪製 3D 效果，我們使用 2:1 的等角透視投影。
+ * 假設 3D 空間網格座標為 (x, y, z)：
+ * - X 軸往右下角延伸
+ * - Y 軸往左下角延伸
+ * - Z 軸往正上方延伸 (螢幕的負 Y 方向)
+ * 
+ * 轉換公式：
+ * screenX = (x - y) * (TILE_WIDTH / 2) + offsetX
+ * screenY = (x + y) * (TILE_HEIGHT / 2) - (z * BLOCK_HEIGHT) + offsetY
+ */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// 網格與方塊設定
+const GRID_SIZE = 5;
+const MAX_HEIGHT = 5;
+const TILE_W = 64;  // 菱形寬度
+const TILE_H = 32;  // 菱形高度
+const BLOCK_H = 32; // 方塊厚度
+const OFFSET_X = canvas.width / 2;
+const OFFSET_Y = 150;
+
+// 系統狀態
+let blocks = []; // 儲存所有方塊 {x, y, z, color}
+let gridHeights = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+let currentTask = 1;
+let historyTask1 = null; // 記憶任務一的長寬高
+let isWaterAnimating = false;
+let waterLevel = 0; // 0 到 1 之間的進度
+let targetWaterVolume = 0;
+
+// 顏色設定
+const COLORS = [
+    { top: '#ff9ff3', left: '#f368e0', right: '#c56cf0' },
+    { top: '#48dbfb', left: '#0abde3', right: '#00d2d3' },
+    { top: '#1dd1a1', left: '#10ac84', right: '#01a3a4' },
+    { top: '#feca57', left: '#ff9f43', right: '#ee5253' }
+];
+
+// 3D 座標轉 2D 螢幕座標
+function toScreen(x, y, z) {
+    return {
+        sx: (x - y) * (TILE_W / 2) + OFFSET_X,
+        sy: (x + y) * (TILE_H / 2) - (z * BLOCK_H) + OFFSET_Y
+    };
+}
+
+// 繪製單一菱形面 (用於底座網格或方塊頂面)
+function drawRhombus(sx, sy, color, isGrid = false) {
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2);
+    ctx.lineTo(sx, sy + TILE_H);
+    ctx.lineTo(sx - TILE_W / 2, sy + TILE_H / 2);
+    ctx.closePath();
+    
+    ctx.fillStyle = color;
+    ctx.fill();
+    
+    ctx.strokeStyle = isGrid ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+}
+
+// 繪製 3D 方塊
+function drawBlock(x, y, z, colorSet) {
+    const { sx, sy } = toScreen(x, y, z);
+
+    // 左側面
+    ctx.beginPath();
+    ctx.moveTo(sx - TILE_W / 2, sy + TILE_H / 2);
+    ctx.lineTo(sx, sy + TILE_H);
+    ctx.lineTo(sx, sy + TILE_H + BLOCK_H);
+    ctx.lineTo(sx - TILE_W / 2, sy + TILE_H / 2 + BLOCK_H);
+    ctx.closePath();
+    ctx.fillStyle = colorSet.left;
+    ctx.fill();
+    ctx.stroke();
+
+    // 右側面
+    ctx.beginPath();
+    ctx.moveTo(sx, sy + TILE_H);
+    ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2);
+    ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2 + BLOCK_H);
+    ctx.lineTo(sx, sy + TILE_H + BLOCK_H);
+    ctx.closePath();
+    ctx.fillStyle = colorSet.right;
+    ctx.fill();
+    ctx.stroke();
+
+    // 頂面
+    drawRhombus(sx, sy, colorSet.top);
+}
+
+// 繪製水箱動畫
+function drawWater() {
+    if (!isWaterAnimating) return;
+
+    const maxZ = Math.max(...blocks.map(b => b.z), 0) + 1;
+    const currentH = (maxZ * BLOCK_H) * waterLevel;
+
+    // 水箱底座 (涵蓋整個 5x5)
+    const backCorner = toScreen(0, 0, 0);
+    const leftCorner = toScreen(0, GRID_SIZE, 0);
+    const rightCorner = toScreen(GRID_SIZE, 0, 0);
+    const frontCorner = toScreen(GRID_SIZE, GRID_SIZE, 0);
+
+    ctx.fillStyle = 'rgba(52, 152, 219, 0.4)';
+    ctx.strokeStyle = 'rgba(41, 128, 185, 0.8)';
+    ctx.lineWidth = 2;
+
+    // 繪製水體積 (多邊形)
+    ctx.beginPath();
+    ctx.moveTo(leftCorner.sx, leftCorner.sy + TILE_H/2 - currentH);
+    ctx.lineTo(frontCorner.sx, frontCorner.sy + TILE_H/2 - currentH);
+    ctx.lineTo(rightCorner.sx, rightCorner.sy + TILE_H/2 - currentH);
+    ctx.lineTo(rightCorner.sx, rightCorner.sy + TILE_H/2);
+    ctx.lineTo(frontCorner.sx, frontCorner.sy + TILE_H/2);
+    ctx.lineTo(leftCorner.sx, leftCorner.sy + TILE_H/2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 水面
+    ctx.beginPath();
+    ctx.moveTo(backCorner.sx, backCorner.sy + TILE_H/2 - currentH);
+    ctx.lineTo(rightCorner.sx, rightCorner.sy + TILE_H/2 - currentH);
+    ctx.lineTo(frontCorner.sx, frontCorner.sy + TILE_H/2 - currentH);
+    ctx.lineTo(leftCorner.sx, leftCorner.sy + TILE_H/2 - currentH);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(52, 152, 219, 0.6)';
+    ctx.fill();
+    ctx.stroke();
+}
+
+// 主渲染迴圈
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. 繪製底座網格
+    for (let x = 0; x < GRID_SIZE; x++) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const { sx, sy } = toScreen(x, y, 0);
+            drawRhombus(sx, sy, '#ffffff', true);
+        }
+    }
+
+    // 2. 排序方塊 (Painter's Algorithm: 確保後方的先畫)
+    // 排序依據：x + y + z 越小越在後方
+    const sortedBlocks = [...blocks].sort((a, b) => {
+        return (a.x + a.y + a.z) - (b.x + b.y + b.z);
+    });
+
+    // 3. 繪製方塊
+    sortedBlocks.forEach(b => drawBlock(b.x, b.y, b.z, b.color));
+
+    // 4. 繪製水箱
+    drawWater();
+}
+
+// 判斷點是否在多邊形內 (射線法)
+function pointInPolygon(point, vs) {
+    let x = point[0], y = point[1];
+    let inside = false;
+    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        let xi = vs[i][0], yi = vs[i][1];
+        let xj = vs[j][0], yj = vs[j][1];
+        let intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+// 處理點擊事件
+canvas.addEventListener('mousedown', (e) => {
+    if (isWaterAnimating) return; // 動畫中禁止操作
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const isRightClick = e.button === 2 || e.shiftKey;
+
+    // 從最前方 (最高層) 開始檢查點擊，找出被點擊的行 (x, y)
+    let clickedCol = null;
+
+    // 建立所有可能被點擊的頂面清單 (包含空網格)
+    let clickTargets = [];
+    for (let x = 0; x < GRID_SIZE; x++) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            let z = gridHeights[x][y];
+            clickTargets.push({ x, y, z });
+        }
+    }
+
+    // 依照畫面的前後順序排序 (Painter's Algorithm 的反向，先檢查最前面的)
+    clickTargets.sort((a, b) => (b.x + b.y + b.z) - (a.x + a.y + a.z));
+
+    for (let target of clickTargets) {
+        const { sx, sy } = toScreen(target.x, target.y, target.z);
+        // 頂面菱形的四個頂點
+        const polygon = [
+            [sx, sy],
+            [sx + TILE_W / 2, sy + TILE_H / 2],
+            [sx, sy + TILE_H],
+            [sx - TILE_W / 2, sy + TILE_H / 2]
+        ];
+
+        if (pointInPolygon([mouseX, mouseY], polygon)) {
+            clickedCol = target;
+            break;
+        }
+    }
+
+    if (clickedCol) {
+        let { x, y } = clickedCol;
+        if (isRightClick) {
+            // 移除方塊
+            if (gridHeights[x][y] > 0) {
+                gridHeights[x][y]--;
+                blocks = blocks.filter(b => !(b.x === x && b.y === y && b.z === gridHeights[x][y]));
+            }
+        } else {
+            // 新增方塊
+            if (gridHeights[x][y] < MAX_HEIGHT) {
+                let z = gridHeights[x][y];
+                let color = COLORS[(x + y + z) % COLORS.length];
+                blocks.push({ x, y, z, color });
+                gridHeights[x][y]++;
+            }
+        }
+        analyzeStructure();
+        render();
+    }
+});
+
+// 停用右鍵選單
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+/**
+ * ==========================================
+ * 數學解析與任務驗證邏輯
+ * ==========================================
+ */
+function analyzeStructure() {
+    let l = 0, w = 0, h = 0;
+    let isPrism = false;
+    let total = blocks.length;
+
+    document.getElementById('formula-box').classList.remove('visible');
+    document.getElementById('feedback-msg').innerText = '';
+
+    if (total > 0) {
+        let minX = GRID_SIZE, maxX = -1;
+        let minY = GRID_SIZE, maxY = -1;
+        let minZ = MAX_HEIGHT, maxZ = -1;
+        let blockSet = new Set();
+
+        blocks.forEach(b => {
+            minX = Math.min(minX, b.x); maxX = Math.max(maxX, b.x);
+            minY = Math.min(minY, b.y); maxY = Math.max(maxY, b.y);
+            minZ = Math.min(minZ, b.z); maxZ = Math.max(maxZ, b.z);
+            blockSet.add(`${b.x},${b.y},${b.z}`);
+        });
+
+        l = maxX - minX + 1;
+        w = maxY - minY + 1;
+        h = maxZ - minZ + 1;
+        isPrism = true;
+
+        // 檢查是否為完美的長方體 (沒有空洞，且貼齊地面)
+        if (minZ !== 0) isPrism = false;
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                for (let z = minZ; z <= maxZ; z++) {
+                    if (!blockSet.has(`${x},${y},${z}`)) {
+                        isPrism = false;
+                    }
+                }
+            }
+        }
+    }
+
+    // 更新右側面板數據
+    document.getElementById('stat-l').innerText = isPrism ? l : '-';
+    document.getElementById('stat-w').innerText = isPrism ? w : '-';
+    document.getElementById('stat-h').innerText = isPrism ? h : '-';
+    document.getElementById('stat-total').innerText = total;
+
+    // 任務驗證邏輯
+    let feedback = '';
+    if (isPrism) {
+        document.getElementById('formula-numbers').innerText = `${l} × ${w} × ${h} = ${l * w * h}`;
+        document.getElementById('formula-box').classList.add('visible');
+
+        if (currentTask === 1) {
+            if (total === 12) {
+                feedback = '🎉 太棒了！你成功堆出體積為 12 的長方體！';
+                historyTask1 = { l, w, h }; // 記憶形狀供任務二使用
+            } else {
+                feedback = `這是一個長方體，但體積是 ${total}，請調整成 12。`;
+            }
+        } 
+        else if (currentTask === 2) {
+            if (total === 12) {
+                if (historyTask1 && (l === historyTask1.l && w === historyTask1.w && h === historyTask1.h)) {
+                    feedback = '形狀跟剛剛一樣喔！請嘗試不同的長寬高組合（例如 6x2x1 或 3x2x2）。';
+                } else {
+                    feedback = '🌟 完美！你證明了形狀不同，體積依然可以相同！(體積守恆)';
+                }
+            } else {
+                feedback = `請堆出體積為 12 的長方體。`;
+            }
+        }
+        else if (currentTask === 3) {
+            feedback = '✨ 觀察右側公式，長×寬×高 就是總方塊數！';
+        }
+    } else if (total > 0) {
+        feedback = '這不是一個完整的長方體喔，請填滿空缺。';
+    }
+
+    document.getElementById('feedback-msg').innerText = feedback;
+}
+
+function setTask(taskId) {
+    currentTask = taskId;
+    
+    // 更新按鈕 UI
+    document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`btn-task${taskId}`).classList.add('active');
+
+    // 更新任務提示
+    const descEl = document.getElementById('task-desc');
+    const waterBtn = document.getElementById('btn-water');
+    waterBtn.style.display = 'none';
+
+    switch(taskId) {
+        case 1:
+            descEl.innerHTML = '<strong>任務一：</strong><br>請在盤面上堆出體積剛好是 <strong>12</strong> 的長方體。';
+            break;
+        case 2:
+            descEl.innerHTML = '<strong>任務二：空間變形</strong><br>請做出一個形狀完全不同，但體積一樣是 <strong>12</strong> 的長方體。';
+            break;
+        case 3:
+            descEl.innerHTML = '<strong>任務三：公式推導</strong><br>請任意堆出一個你喜歡的長方體！觀察右側的公式變化。';
+            break;
+        case 4:
+            descEl.innerHTML = '<strong>任務四：水箱物理驗證</strong><br>隨意堆疊方塊，然後點擊下方按鈕，觀察水位的變化！';
+            waterBtn.style.display = 'block';
+            break;
+    }
+
+    clearBlocks();
+}
+
+function clearBlocks() {
+    blocks = [];
+    gridHeights = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+    isWaterAnimating = false;
+    waterLevel = 0;
+    document.getElementById('water-text').style.opacity = 0;
+    analyzeStructure();
+    render();
+}
+
+function startWaterAnimation() {
+    if (blocks.length === 0) {
+        alert("請先放置方塊！");
+        return;
+    }
+    isWaterAnimating = true;
+    waterLevel = 0;
+    targetWaterVolume = blocks.length;
+    
+    document.getElementById('water-text').innerText = `水位上升了 ${targetWaterVolume} 個單位！\n這就是建築物的體積！`;
+    
+    function animate() {
+        waterLevel += 0.01;
+        render();
+        if (waterLevel < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            document.getElementById('water-text').style.opacity = 1;
+            setTimeout(() => {
+                isWaterAnimating = false;
+                waterLevel = 0;
+                document.getElementById('water-text').style.opacity = 0;
+                render();
+            }, 4000);
+        }
+    }
+    animate();
+}
+
+// 初始化
+render();
+
+</script>
+</body>
+</html>
