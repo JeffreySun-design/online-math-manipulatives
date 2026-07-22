@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玩具店折扣收銀台 - 數學教具</title>
+    <style>
+        /* ==========================================
+           1. 全局變數與基礎設定 (Global Variables & Reset)
+           ========================================== */
+        :root {
+            --color-bg: #fef3c7;        /* 溫暖的米黃色系 */
+            --color-primary: #f59e0b;   /* 亮橘黃色 */
+            --color-secondary: #3b82f6; /* 亮藍色 */
+            --color-pos-bg: #1e293b;    /* 收銀機深藍灰背景 */
+            --color-pos-text: #f8fafc;  /* 收銀機亮色文字 */
+            --color-pay: #10b981;       /* 實際支付 (亮綠色) */
+            --color-discount: #ef4444;  /* 折扣扣除 (紅色) */
+            --color-discount-bg: #334155; /* 折扣區塊底色 (深灰) */
+            --color-text: #334155;      /* 一般深灰文字 */
+            --color-card: #ffffff;      /* 卡片背景 */
+            --radius-lg: 24px;
+            --radius-md: 12px;
+            --radius-pill: 9999px;
+            --shadow-soft: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Nunito', 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        }
+
+        body {
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* ==========================================
+           2. 頂部導覽與任務提示區 (Header & Prompts)
+           ========================================== */
+        header {
+            background-color: var(--color-card);
+            padding: 1.5rem 2rem;
+            box-shadow: var(--shadow-soft);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            z-index: 20;
+            position: relative;
+        }
+
+        h1 {
+            color: var(--color-primary);
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0px #fef3c7;
+        }
+
+        .task-nav {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn-task {
+            padding: 0.6rem 1.5rem;
+            border: 2px solid var(--color-secondary);
+            background: white;
+            color: var(--color-secondary);
+            border-radius: var(--radius-pill);
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 1.05rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-task:hover {
+            background: #eff6ff;
+            transform: translateY(-2px);
+        }
+
+        .btn-task.active {
+            background: var(--color-secondary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        /* 浮動任務提示面板 */
+        .floating-prompt {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 1rem;
+            background: #fffbeb;
+            color: #b45309;
+            padding: 1rem 2rem;
+            border-radius: var(--radius-md);
+            border: 2px dashed #f59e0b;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            font-weight: 800;
+            font-size: 1.2rem;
+            text-align: center;
+            width: 90%;
+            max-width: 800px;
+            display: none;
+            z-index: 30;
+            animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes slideDown {
+            0% { opacity: 0; transform: translate(-50%, -20px); }
+            100% { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        /* ==========================================
+           3. 主要佈局 (Main Layout)
+           ========================================== */
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1.5fr;
+            gap: 1.5rem;
+            padding: 2rem;
+            padding-top: 4rem; /* 留空間給浮動提示 */
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (max-width: 1024px) {
+            main { grid-template-columns: 1fr; padding-top: 2rem; }
+            .floating-prompt { position: static; transform: none; margin: 1rem auto; width: 100%; }
+        }
+
+        .panel {
+            background: var(--color-card);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-soft);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .panel-title {
+            font-size: 1.4rem;
+            color: var(--color-text);
+            text-align: center;
+            font-weight: 900;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid #f1f5f9;
+            margin-bottom: 0.5rem;
+        }
+
+        /* ==========================================
+           4. 左側：貨架商品區 (Store Shelf)
+           ========================================== */
+        .product-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            text-align: center;
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-4px);
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .product-icon {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1));
+        }
+
+        .product-title {
+            font-weight: 900;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #1e293b;
+        }
+
+        /* 黃色標價牌 */
+        .price-tag {
+            background: #fde047;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 2px dashed #ca8a04;
+            font-weight: 900;
+            color: #854d0e;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.05);
+        }
+
+        .price-tag input {
+            width: 80px;
+            padding: 0.4rem;
+            font-size: 1.2rem;
+            font-weight: 900;
+            border: 2px solid #eab308;
+            border-radius: 6px;
+            text-align: center;
+            color: #b45309;
+            background: white;
+            outline: none;
+        }
+
+        .price-tag input:focus { border-color: #ca8a04; }
+
+        .hidden-element { display: none !important; }
+        
+        .question-mark {
+            font-size: 2rem;
+            color: #dc2626;
+            font-weight: 900;
+            display: none;
+        }
+
+        /* ==========================================
+           5. 中間：結帳套用優惠區 (Coupons & Promos)
+           ========================================== */
+        .coupon-box {
+            border: 2px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            background: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .coupon-title {
+            font-weight: 900;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* 膠囊型切換按鈕 */
+        .toggle-group {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: var(--radius-pill);
+            padding: 4px;
+            margin-bottom: 1.2rem;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 0.6rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 800;
+            color: #64748b;
+            border-radius: var(--radius-pill);
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .toggle-btn.active {
+            background: white;
+            color: var(--color-secondary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 滑桿與明細 */
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: var(--color-primary);
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .promo-detail {
+            text-align: center;
+            font-weight: 900;
+            font-size: 1.2rem;
+            color: #b45309;
+            background: #fffbeb;
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: 2px dashed #fcd34d;
+        }
+
+        /* ==========================================
+           6. 右側：收銀機螢幕區 (POS Screen)
+           ========================================== */
+        .pos-bg {
+            background: var(--color-pos-bg);
+            color: var(--color-pos-text);
+            border: 12px solid #0f172a;
+            border-radius: 32px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .pos-bg .panel-title {
+            color: #38bdf8;
+            border-bottom-color: #334155;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* 圖例說明 */
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        .box-pay { background: var(--color-pay); }
+        .box-discount { 
+            background: repeating-linear-gradient(
+                45deg,
+                var(--color-discount),
+                var(--color-discount) 8px,
+                var(--color-discount-bg) 8px,
+                var(--color-discount-bg) 16px
+            );
+        }
+
+        .screen-item {
+            background: #0f172a;
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            border: 1px solid #334155;
+            margin-bottom: 1rem;
+        }
+
+        .screen-title {
+            font-weight: 900;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .original-price-label {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            background: #1e293b;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+        }
+
+        /* 動態長條圖 (核心) */
+        .bar-wrapper {
+            width: 100%;
+            height: 36px;
+            background: #000000;
+            border-radius: 18px;
+            overflow: hidden;
+            display: flex;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            border: 2px solid #475569;
+        }
+
+        .bar-segment {
+            height: 100%;
+            /* 寬度過渡動畫 */
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 0.9rem;
+            color: white;
+            overflow: hidden;
+            white-space: nowrap;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .bar-pay {
+            background: var(--color-pay);
+            /* 亮綠色漸層 */
+            background-image: linear-gradient(to bottom, #34d399, #10b981);
+        }
+
+        .bar-discount {
+            /* 深灰色底加紅色斜線紋理 */
+            background: repeating-linear-gradient(
+                45deg,
+                var(--color-discount),
+                var(--color-discount) 10px,
+                var(--color-discount-bg) 10px,
+                var(--color-discount-bg) 20px
+            );
+        }
+
+        .receipt-details {
+            margin-top: 1.2rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #cbd5e1;
+            text-align: right;
+        }
+
+        .text-pay { color: #34d399; font-size: 1.4rem; font-weight: 900; }
+        .text-discount { color: #f87171; }
+
+        /* ==========================================
+           7. 底部：自動比價判定區 & 反推原價區
+           ========================================== */
+        footer {
+            background: var(--color-card);
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.03);
+            font-size: 2rem;
+            font-weight: 900;
+            z-index: 10;
+            border-top: 4px solid #e2e8f0;
+            margin-top: auto;
+        }
+
+        .winner-text {
+            animation: popScale 0.5s ease-out forwards;
+        }
+
+        .winner-a { color: #ea580c; } /* 橘色 */
+        .winner-b { color: #2563eb; } /* 藍色 */
+        .tie { color: #059669; }      /* 綠色 */
+
+        @keyframes popScale {
+            0% { transform: scale(0.9); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 任務三：反推原價作答區 */
+        #reverse-task-area {
+            display: none;
+            background: #eff6ff;
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            text-align: center;
+            border: 3px dashed #3b82f6;
+            margin-top: 1.5rem;
+        }
+
+        #reverse-task-area label {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #1e3a8a;
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        #reverse-task-area input {
+            width: 100px;
+            padding: 0.6rem;
+            border: 3px solid #60a5fa;
+            border-radius: 8px;
+            font-size: 1.5rem;
+            font-weight: 900;
+            text-align: center;
+            color: #1d4ed8;
+            outline: none;
+        }
+
+        #reverse-task-area input:focus { border-color: #2563eb; }
+
+        #reverse-feedback {
+            margin-top: 1rem;
+            font-weight: 900;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 頂部導覽與任務提示區 -->
+    <header>
+        <h1>🏪 玩具店折扣收銀台</h1>
+        <div class="task-nav">
+            <button class="btn-task active" onclick="setTask(0)">🛒 自由探索</button>
+            <button class="btn-task" onclick="setTask(1)">🎯 任務一：精打細算</button>
+            <button class="btn-task" onclick="setTask(2)">⚠️ 任務二：老闆的陷阱</button>
+            <button class="btn-task" onclick="setTask(3)">🕵️‍♂️ 任務三：反推原價</button>
+        </div>
+        <!-- 浮動情境提示 -->
+        <div id="task-prompt" class="floating-prompt"></div>
+    </header>
+
+    <main>
+        <!-- 1. 左側：貨架商品區 -->
+        <section class="panel" id="shelf-area">
+            <div class="panel-title">🧸 1. 貨架商品</div>
+            
+            <!-- 商品 A：公仔 -->
+            <div class="product-card">
+                <div class="product-icon">🦸‍♂️</div>
+                <div class="product-title">精緻公仔</div>
+                <div class="price-tag">
+                    <label>標價 $</label>
+                    <input type="number" id="price-a" value="100" min="1" oninput="updateCheckout()">
+                    <span class="question-mark" id="qm-a">❓</span>
+                </div>
+            </div>
+
+            <!-- 商品 B：模型車 -->
+            <div class="product-card" id="card-b">
+                <div class="product-icon">🏎️</div>
+                <div class="product-title">限量模型車</div>
+                <div class="price-tag">
+                    <label>標價 $</label>
+                    <input type="number" id="price-b" value="120" min="1" oninput="updateCheckout()">
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 中間：結帳套用優惠區 -->
+        <section class="panel" id="promo-area">
+            <div class="panel-title">🎟️ 2. 套用優惠</div>
+
+            <!-- 公仔優惠 -->
+            <div class="coupon-box">
+                <div class="coupon-title">🦸‍♂️ 公仔專屬優惠</div>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" id="mode-a-percent" onclick="setMode('a', 'percent')">紅利券 (打折)</button>
+                    <button class="toggle-btn" id="mode-a-fixed" onclick="setMode('a', 'fixed')">抵用券 (折現)</button>
+                </div>
+                
+                <div class="slider-container" id="slider-container-a-percent">
+                    <input type="range" id="discount-a-percent" min="1" max="9" step="1" value="8" oninput="updateCheckout()">
+                    <div class="promo-detail">全館打 <span id="val-a-percent">8</span> 折</div>
+                </div>
+                
+                <div class="slider-container" id="slider-container-a-fixed" style="display: none;">
+                    <input type="range" id="discount-a-fixed" min="0" max="1000" step="5" value="20" oninput="updateCheckout()">
+                    <div class="promo-detail">現折 <span id="val-a-fixed">20</span> 元</div>
+                </div>
+            </div>
+
+            <!-- 模型車優惠 -->
+            <div class="coupon-box" id="control-b">
+                <div class="coupon-title">🏎️ 模型車專屬優惠</div>
+                <div class="toggle-group">
+                    <button class="toggle-btn" id="mode-b-percent" onclick="setMode('b', 'percent')">紅利券 (打折)</button>
+                    <button class="toggle-btn active" id="mode-b-fixed" onclick="setMode('b', 'fixed')">抵用券 (折現)</button>
+                </div>
+                
+                <div class="slider-container" id="slider-container-b-percent" style="display: none;">
+                    <input type="range" id="discount-b-percent" min="1" max="9" step="1" value="8" oninput="updateCheckout()">
+                    <div class="promo-detail">全館打 <span id="val-b-percent">8</span> 折</div>
+                </div>
+                
+                <div class="slider-container" id="slider-container-b-fixed">
+                    <input type="range" id="discount-b-fixed" min="0" max="1000" step="5" value="20" oninput="updateCheckout()">
+                    <div class="promo-detail">現折 <span id="val-b-fixed">20</span> 元</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 右側：收銀機螢幕區 -->
+        <section class="panel pos-bg" id="checkout-area">
+            <div class="panel-title">💻 3. POS 結帳螢幕</div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="color-box box-pay"></div>
+                    <span>實際要付的錢</span>
+                </div>
+                <div class="legend-item">
+                    <div class="color-box box-discount"></div>
+                    <span>被扣除的折扣</span>
+                </div>
+            </div>
+
+            <!-- 公仔螢幕 -->
+            <div class="screen-item">
+                <div class="screen-title">
+                    <span>🦸‍♂️ 精緻公仔</span>
+                    <span class="original-price-label" id="screen-price-a">原價 $100</span>
+                </div>
+                <!-- 動態長條圖 -->
+                <div class="bar-wrapper">
+                    <div class="bar-segment bar-pay" id="bar-a-pay"></div>
+                    <div class="bar-segment bar-discount" id="bar-a-discount"></div>
+                </div>
+                <div class="receipt-details">
+                    ➔ 只要 <span class="text-pay" id="final-price-a">$80</span> 
+                    (省下 <span class="text-discount" id="saved-a">$20</span>)
+                </div>
+            </div>
+
+            <!-- 模型車螢幕 -->
+            <div class="screen-item" id="screen-b">
+                <div class="screen-title">
+                    <span>🏎️ 限量模型車</span>
+                    <span class="original-price-label" id="screen-price-b">原價 $120</span>
+                </div>
+                <!-- 動態長條圖 -->
+                <div class="bar-wrapper">
+                    <div class="bar-segment bar-pay" id="bar-b-pay"></div>
+                    <div class="bar-segment bar-discount" id="bar-b-discount"></div>
+                </div>
+                <div class="receipt-details">
+                    ➔ 只要 <span class="text-pay" id="final-price-b">$100</span> 
+                    (省下 <span class="text-discount" id="saved-b">$20</span>)
+                </div>
+            </div>
+
+            <!-- 任務三：反推原價作答區 (放在螢幕下方) -->
+            <div id="reverse-task-area">
+                <label>💡 請幫老闆算算看，公仔原價是多少？</label>
+                <input type="number" id="reverse-answer" placeholder="?" oninput="checkReverseAnswer()">
+                <div id="reverse-feedback"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 4. 底部：自動比價判定區 -->
+    <footer>
+        <div id="judge-result">請調整數值來比較結帳金額！</div>
+    </footer>
+
+    <script>
+        /* ==========================================
+           狀態管理與初始化
+           ========================================== */
+        let state = {
+            a: { price: 100, mode: 'percent', percentVal: 8, fixedVal: 20 },
+            b: { price: 120, mode: 'fixed', percentVal: 8, fixedVal: 20 },
+            currentTask: 0
+        };
+
+        window.onload = () => {
+            updateCheckout();
+        };
+
+        /* ==========================================
+           UI 互動邏輯：切換折扣模式 (膠囊按鈕)
+           ========================================== */
+        function setMode(product, mode) {
+            state[product].mode = mode;
+            
+            // 切換按鈕 active 樣式
+            document.getElementById(`mode-${product}-percent`).classList.toggle('active', mode === 'percent');
+            document.getElementById(`mode-${product}-fixed`).classList.toggle('active', mode === 'fixed');
+            
+            // 切換對應的滑桿顯示
+            document.getElementById(`slider-container-${product}-percent`).style.display = mode === 'percent' ? 'flex' : 'none';
+            document.getElementById(`slider-container-${product}-fixed`).style.display = mode === 'fixed' ? 'flex' : 'none';
+            
+            updateCheckout();
+        }
+
+        /* ==========================================
+           核心計算與渲染邏輯 (Core Logic)
+           ========================================== */
+        function updateCheckout() {
+            // 1. 讀取 DOM 輸入值 (任務三隱藏輸入時不讀取公仔原價)
+            if(state.currentTask !== 3) {
+                state.a.price = parseFloat(document.getElementById('price-a').value) || 0;
+            }
+            state.b.price = parseFloat(document.getElementById('price-b').value) || 0;
+            
+            state.a.percentVal = parseInt(document.getElementById('discount-a-percent').value);
+            state.a.fixedVal = parseInt(document.getElementById('discount-a-fixed').value);
+            
+            state.b.percentVal = parseInt(document.getElementById('discount-b-percent').value);
+            state.b.fixedVal = parseInt(document.getElementById('discount-b-fixed').value);
+
+            // 2. 更新滑桿明細文字
+            document.getElementById('val-a-percent').innerText = state.a.percentVal;
+            document.getElementById('val-a-fixed').innerText = state.a.fixedVal;
+            document.getElementById('val-b-percent').innerText = state.b.percentVal;
+            document.getElementById('val-b-fixed').innerText = state.b.fixedVal;
+
+            // 限制固定折扣不能超過原價
+            document.getElementById('discount-a-fixed').max = state.a.price;
+            document.getElementById('discount-b-fixed').max = state.b.price;
+            
+            if (state.a.fixedVal > state.a.price) {
+                state.a.fixedVal = state.a.price;
+                document.getElementById('discount-a-fixed').value = state.a.price;
+                document.getElementById('val-a-fixed').innerText = state.a.price;
+            }
+            if (state.b.fixedVal > state.b.price) {
+                state.b.fixedVal = state.b.price;
+                document.getElementById('discount-b-fixed').value = state.b.price;
+                document.getElementById('val-b-fixed').innerText = state.b.price;
+            }
+
+            // 3. 數學計算：折後價與節省金額
+            let finalA, savedA, finalB, savedB;
+
+            // 公仔 (A) 計算
+            if (state.a.mode === 'percent') {
+                finalA = state.a.price * (state.a.percentVal / 10);
+                savedA = state.a.price - finalA;
+            } else {
+                savedA = Math.min(state.a.fixedVal, state.a.price);
+                finalA = state.a.price - savedA;
+            }
+
+            // 模型車 (B) 計算
+            if (state.b.mode === 'percent') {
+                finalB = state.b.price * (state.b.percentVal / 10);
+                savedB = state.b.price - finalB;
+            } else {
+                savedB = Math.min(state.b.fixedVal, state.b.price);
+                finalB = state.b.price - savedB;
+            }
+
+            // 4. 更新收銀機明細文字
+            document.getElementById('screen-price-a').innerText = `原價 $${state.a.price}`;
+            document.getElementById('final-price-a').innerText = `$${finalA.toFixed(0)}`;
+            document.getElementById('saved-a').innerText = `$${savedA.toFixed(0)}`;
+            
+            document.getElementById('screen-price-b').innerText = `原價 $${state.b.price}`;
+            document.getElementById('final-price-b').innerText = `$${finalB.toFixed(0)}`;
+            document.getElementById('saved-b').innerText = `$${savedB.toFixed(0)}`;
+
+            /* 
+             * =====================================================================
+             * 5. 價格條比例轉換邏輯 (Bar Chart Mapping Logic) - 嚴格遵守規格
+             * =====================================================================
+             * 規格要求：「將原價映射為最大寬度 100%，確保紅綠區塊寬度相加永遠等於 100%」
+             * 
+             * 數學邏輯：
+             * 每個長條圖的總寬度 (100%) 代表該商品自己的「原價」。
+             * - 綠色區塊 (實際支付) 寬度 % = (折後價 / 原價) * 100
+             * - 紅色區塊 (折扣扣除) 寬度 % = (節省金額 / 原價) * 100
+             * 這樣能保證 綠色% + 紅色% = 100%，完美填滿長條圖。
+             */
+            
+            // 避免除以零的防呆處理
+            let safePriceA = state.a.price > 0 ? state.a.price : 1;
+            let safePriceB = state.b.price > 0 ? state.b.price : 1;
+
+            // 計算公仔 (A) 的百分比
+            let widthAPay = (finalA / safePriceA) * 100;
+            let widthADiscount = (savedA / safePriceA) * 100;
+            
+            // 計算模型車 (B) 的百分比
+            let widthBPay = (finalB / safePriceB) * 100;
+            let widthBDiscount = (savedB / safePriceB) * 100;
+
+            // 透過 CSS width 屬性渲染長條圖 (觸發 transition 動畫)
+            document.getElementById('bar-a-pay').style.width = `${widthAPay}%`;
+            document.getElementById('bar-a-discount').style.width = `${widthADiscount}%`;
+            
+            document.getElementById('bar-b-pay').style.width = `${widthBPay}%`;
+            document.getElementById('bar-b-discount').style.width = `${widthBDiscount}%`;
+
+            // 在長條圖內顯示金額 (若寬度太窄則隱藏文字，避免破版)
+            document.getElementById('bar-a-pay').innerText = widthAPay > 15 ? `$${finalA.toFixed(0)}` : '';
+            document.getElementById('bar-a-discount').innerText = widthADiscount > 15 ? `-$${savedA.toFixed(0)}` : '';
+            document.getElementById('bar-b-pay').innerText = widthBPay > 15 ? `$${finalB.toFixed(0)}` : '';
+            document.getElementById('bar-b-discount').innerText = widthBDiscount > 15 ? `-$${savedB.toFixed(0)}` : '';
+
+            // 6. 更新底部自動比價判定區
+            let judgeEl = document.getElementById('judge-result');
+            
+            // 觸發重新動畫的小技巧
+            judgeEl.classList.remove('winner-text');
+            void judgeEl.offsetWidth; // trigger reflow
+            judgeEl.classList.add('winner-text');
+
+            if (state.currentTask === 3) {
+                judgeEl.innerHTML = `🕵️‍♂️ 任務三：請在右方螢幕下方輸入你算出的原價！`;
+                judgeEl.className = 'winner-text';
+                judgeEl.style.color = '#334155';
+            } else {
+                if (finalA < finalB) {
+                    judgeEl.innerHTML = `🛒 買『🦸‍♂️ 精緻公仔』比較划算！(只要 $${finalA.toFixed(0)})`;
+                    judgeEl.className = 'winner-text winner-a';
+                } else if (finalB < finalA) {
+                    judgeEl.innerHTML = `🛒 買『🏎️ 限量模型車』比較划算！(只要 $${finalB.toFixed(0)})`;
+                    judgeEl.className = 'winner-text winner-b';
+                } else {
+                    judgeEl.innerHTML = `🤝 兩樣結帳金額一樣！(都是 $${finalA.toFixed(0)})`;
+                    judgeEl.className = 'winner-text tie';
+                }
+            }
+        }
+
+        /* ==========================================
+           購物任務系統 (Task Navbar Logic)
+           ========================================== */
+        function setTask(taskNumber) {
+            state.currentTask = taskNumber;
+            
+            // 更新導覽列按鈕狀態
+            document.querySelectorAll('.btn-task').forEach((btn, idx) => {
+                btn.classList.toggle('active', idx === taskNumber);
+            });
+
+            let promptEl = document.getElementById('task-prompt');
+            let qmA = document.getElementById('qm-a');
+            let inputA = document.getElementById('price-a');
+            let cardB = document.getElementById('card-b');
+            let controlB = document.getElementById('control-b');
+            let screenB = document.getElementById('screen-b');
+            let reverseArea = document.getElementById('reverse-task-area');
+
+            // 每次切換任務先重置 UI 顯示狀態
+            qmA.style.display = 'none';
+            inputA.classList.remove('hidden-element');
+            cardB.classList.remove('hidden-element');
+            controlB.classList.remove('hidden-element');
+            screenB.classList.remove('hidden-element');
+            reverseArea.style.display = 'none';
+            document.getElementById('reverse-answer').value = '';
+            document.getElementById('reverse-feedback').innerText = '';
+
+            // 重新觸發提示面板動畫
+            promptEl.style.animation = 'none';
+            void promptEl.offsetWidth; 
+            promptEl.style.animation = 'slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+            if (taskNumber === 0) {
+                // 自由探索
+                promptEl.style.display = 'none';
+            } 
+            else if (taskNumber === 1) {
+                // 任務一：精打細算
+                promptEl.style.display = 'block';
+                promptEl.innerText = '任務一：老闆說今天公仔打 8 折，模型車折 20 元。請看結帳螢幕的價格條，買哪一個比較便宜？';
+                
+                inputA.value = 100;
+                document.getElementById('price-b').value = 120;
+                
+                setMode('a', 'percent');
+                document.getElementById('discount-a-percent').value = 8;
+                
+                setMode('b', 'fixed');
+                document.getElementById('discount-b-fixed').value = 20;
+            }
+            else if (taskNumber === 2) {
+                // 任務二：老闆的陷阱
+                promptEl.style.display = 'block';
+                promptEl.innerText = '任務二：注意看紅色的折扣區塊！為什麼兩個優惠都有「20」，扣掉的錢卻不一樣多？';
+                
+                inputA.value = 150;
+                document.getElementById('price-b').value = 150;
+                
+                setMode('a', 'percent');
+                document.getElementById('discount-a-percent').value = 8; // 8折 = 扣20%
+                
+                setMode('b', 'fixed');
+                document.getElementById('discount-b-fixed').value = 20;  // 折20元
+            }
+            else if (taskNumber === 3) {
+                // 任務三：反推原價
+                promptEl.style.display = 'block';
+                promptEl.innerText = '任務三：糟糕，公仔的標價牌掉下來了！如果打 8 折後是 80 元，你能幫老闆算出原價是多少嗎？';
+                
+                // 隱藏模型車的所有資訊，專注於公仔
+                cardB.classList.add('hidden-element');
+                controlB.classList.add('hidden-element');
+                screenB.classList.add('hidden-element');
+                
+                // 隱藏公仔的輸入框，顯示問號
+                inputA.classList.add('hidden-element');
+                qmA.style.display = 'inline-block';
+                
+                // 顯示作答區
+                reverseArea.style.display = 'block';
+
+                // 設定內部狀態 (答案為 100)
+                state.a.price = 100; 
+                setMode('a', 'percent');
+                document.getElementById('discount-a-percent').value = 8;
+            }
+
+            updateCheckout();
+        }
+
+        /* ==========================================
+           任務三：檢查反推答案
+           ========================================== */
+        function checkReverseAnswer() {
+            let ans = parseFloat(document.getElementById('reverse-answer').value);
+            let feedback = document.getElementById('reverse-feedback');
+            
+            if (isNaN(ans)) {
+                feedback.innerText = '';
+                return;
+            }
+
+            if (ans === 100) {
+                feedback.innerText = '🎉 答對了！原價是 $100 (100 × 0.8 = 80)';
+                feedback.style.color = '#10b981';
+                // 答對後揭曉標價牌
+                document.getElementById('qm-a').style.display = 'none';
+                document.getElementById('price-a').classList.remove('hidden-element');
+                document.getElementById('price-a').value = 100;
+            } else {
+                feedback.innerText = '❌ 再想想看！(提示：什麼數字乘以 0.8 會等於 80？)';
+                feedback.style.color = '#ef4444';
+            }
+        }
+    </script>
+</body>
+</html>
