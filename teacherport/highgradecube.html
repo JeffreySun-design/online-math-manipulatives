@@ -332,5 +332,91 @@
             }
         }
     </script>
+
+<!-- AI 助教 -->
+<div id="aiBox"
+     style="position:fixed;
+            right:20px;
+            bottom:20px;
+            width:350px;
+            background:white;
+            border:1px solid #ccc;
+            border-radius:10px;
+            padding:10px;
+            box-shadow:0 0 10px rgba(0,0,0,.2);
+            z-index:9999;">
+
+    <div id="chat"
+         style="height:250px;
+                overflow-y:auto;
+                margin-bottom:10px;
+                border:1px solid #ddd;
+                padding:8px;">
+    </div>
+
+    <input id="question"
+           type="text"
+           placeholder="請輸入數學問題..."
+           style="width:100%;padding:8px;">
+
+    <button id="sendBtn"
+            style="margin-top:8px;width:100%;">
+        送出
+    </button>
+
+</div>
+
+<script>
+
+// 告訴 AI 目前是哪一個教具
+window.aiInfo = {
+
+    module: "方塊",
+
+    grade: "高年級（五、六年級）",
+
+    description: `
+你目前位於「立體方塊探索實驗室」。
+
+這是一個國小高年級數學互動教具，
+主要透過立體圖形操作與空間觀察，
+協助學生理解正方體、長方體、體積以及空間關係。
+
+教具提供的功能包括：
+
+1. 建立不同大小的立體方塊
+2. 調整長、寬、高尺寸
+3. 觀察立體圖形外觀變化
+4. 計算長方體與正方體體積
+5. 比較不同立體大小
+6. 理解體積與空間占有量的關係
+7. 觀察堆疊方塊的數量變化
+8. 理解表面積與體積的差異
+9. 分析立體圖形結構
+10. 利用生活情境解決體積問題
+
+
+請優先協助學生：
+
+• 引導學生理解體積代表空間大小，而不是只記公式。
+• 鼓勵學生觀察長、寬、高改變後，立體大小如何變化。
+• 如果學生詢問「下一步怎麼做」、「這個按鈕怎麼使用」、「我要怎麼完成」，請依照目前方塊教具功能回答。
+• 可以提供生活化例子，例如箱子容量、教室空間、積木堆疊、收納盒大小等情境。
+• 回答內容需符合國小高年級學生程度，避免使用過於艱深的立體幾何術語。
+• 若學生詢問體積計算答案，可以先提示學生觀察長、寬、高的關係，引導學生自己計算。
+• 協助學生理解「體積變大不一定只是高度增加，也可能是長和寬改變」等常見概念。
+
+
+如果學生詢問與方塊教具無關的內容，
+請提醒他目前正在使用「立體方塊探索實驗室」，
+並引導回目前學習內容。
+`
+
+};
+
+</script>
+
+<script src="../ai.js"></script>
+
 </body>
 </html>

@@ -332,5 +332,89 @@
             }
         }
     </script>
+
+
+
+<!-- AI 助教 -->
+<div id="aiBox"
+     style="position:fixed;
+            right:20px;
+            bottom:20px;
+            width:350px;
+            background:white;
+            border:1px solid #ccc;
+            border-radius:10px;
+            padding:10px;
+            box-shadow:0 0 10px rgba(0,0,0,.2);
+            z-index:9999;">
+
+    <div id="chat"
+         style="height:250px;
+                overflow-y:auto;
+                margin-bottom:10px;
+                border:1px solid #ddd;
+                padding:8px;">
+    </div>
+
+    <input id="question"
+           type="text"
+           placeholder="請輸入數學問題..."
+           style="width:100%;padding:8px;">
+
+    <button id="sendBtn"
+            style="margin-top:8px;width:100%;">
+        送出
+    </button>
+
+</div>
+
+<script>
+
+// 告訴 AI 目前是哪一個教具
+window.aiInfo = {
+
+    module: "圖表",
+
+    grade: "高年級（五、六年級）",
+
+    description: `
+你目前位於「資料圖表實驗室」。
+
+這是一個國小高年級數學互動教具，主要目的是透過資料整理與圖表視覺化，引導學生理解統計概念與培養數據分析能力。
+
+教具提供的功能包括：
+
+1. 建立長條圖
+2. 建立複合長條圖
+3. 建立圓餅圖
+4. 編輯資料內容
+5. 修改資料數值
+6. 新增或刪除資料
+7. 觀察不同圖表呈現方式
+8. 比較各類資料大小
+9. 判讀圖表資訊
+10. 分析資料所代表的意義
+
+請優先協助學生：
+
+• 理解圖表代表的意義，而不是只教如何操作。
+• 引導學生自己觀察資料並思考，而不是直接公布答案。
+• 若學生詢問「下一步怎麼做」、「這個按鈕做什麼」、「我要怎麼完成」，請依照目前圖表教具的功能回答。
+• 可以提供提示、舉例及生活化情境，例如班級身高、最喜歡的水果、每日閱讀時間等。
+• 回答內容需符合國小高年級學生程度，避免使用過於艱深的統計術語。
+
+如果學生詢問與目前圖表教具完全無關的內容，可以提醒他目前正在使用「資料圖表實驗室」，並引導回目前的學習內容。
+`
+
+
+};
+
+</script>
+
+<script src="../ai.js"></script>
+
+
+
+
 </body>
 </html>

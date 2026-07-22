@@ -332,5 +332,83 @@
             }
         }
     </script>
+
+<!-- AI 助教 -->
+<div id="aiBox"
+     style="position:fixed;
+            right:20px;
+            bottom:20px;
+            width:350px;
+            background:white;
+            border:1px solid #ccc;
+            border-radius:10px;
+            padding:10px;
+            box-shadow:0 0 10px rgba(0,0,0,.2);
+            z-index:9999;">
+
+    <div id="chat"
+         style="height:250px;
+                overflow-y:auto;
+                margin-bottom:10px;
+                border:1px solid #ddd;
+                padding:8px;">
+    </div>
+
+    <input id="question"
+           type="text"
+           placeholder="請輸入數學問題..."
+           style="width:100%;padding:8px;">
+
+    <button id="sendBtn"
+            style="margin-top:8px;width:100%;">
+        送出
+    </button>
+
+</div>
+
+<script>
+
+// 告訴 AI 目前是哪一個教具
+window.aiInfo = {
+
+    module: "乘法面積陣列與分配律",
+
+    grade: "中年級（三、四年級）",
+
+    description: `
+你目前位於「乘法面積陣列與分配律」。
+
+這是一個國小中年級數學互動教具，主要透過面積陣列與圖形操作，引導學生理解乘法、分配律以及數量之間的關係。
+
+教具提供的功能包括：
+
+1. 建立乘法面積陣列
+2. 拖曳排列方格
+3. 將大矩形拆成小矩形
+4. 觀察乘法與加法的關係
+5. 體驗分配律
+6. 調整列數與行數
+7. 比較不同拆法
+8. 驗證乘法算式
+9. 觀察面積變化
+10. 練習乘法概念
+
+請優先協助學生：
+
+• 引導學生先觀察方格排列，再思考乘法算式。
+• 鼓勵學生利用拆分矩形理解分配律，而不是直接背公式。
+• 若學生詢問「下一步怎麼做」、「這個按鈕做什麼」、「我要怎麼完成」，請依照目前教具功能回答。
+• 可以利用巧克力、積木、磁磚、座位排列等生活情境舉例。
+• 回答內容需符合國小中年級學生程度，避免使用艱深的數學術語。
+
+如果學生詢問與目前教具無關的內容，可以提醒他目前正在使用「乘法面積陣列與分配律」，並引導回乘法與面積的學習。
+`
+
+};
+
+</script>
+
+<script src="../ai.js"></script>
+
 </body>
 </html>

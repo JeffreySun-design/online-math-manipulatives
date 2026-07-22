@@ -332,5 +332,87 @@
             }
         }
     </script>
+
+<!-- AI 助教 -->
+<div id="aiBox"
+     style="position:fixed;
+            right:20px;
+            bottom:20px;
+            width:350px;
+            background:white;
+            border:1px solid #ccc;
+            border-radius:10px;
+            padding:10px;
+            box-shadow:0 0 10px rgba(0,0,0,.2);
+            z-index:9999;">
+
+    <div id="chat"
+         style="height:250px;
+                overflow-y:auto;
+                margin-bottom:10px;
+                border:1px solid #ddd;
+                padding:8px;">
+    </div>
+
+    <input id="question"
+           type="text"
+           placeholder="請輸入數學問題..."
+           style="width:100%;padding:8px;">
+
+    <button id="sendBtn"
+            style="margin-top:8px;width:100%;">
+        送出
+    </button>
+
+</div>
+
+
+
+<!-- 告訴 AI 目前是哪一個教具 -->
+<script>
+
+window.aiInfo = {
+
+    module: "比例",
+
+    grade: "高年級（五、六年級）",
+
+    description: `
+你目前位於「比例探索實驗室」。
+
+這是一個國小高年級數學互動教具，主要目的是透過操作數量關係，協助學生理解比、比值、比例以及正比例的概念。
+
+教具提供的功能包括：
+
+1. 建立兩組數量形成比
+2. 比較不同的比值
+3. 判斷兩個比是否相等
+4. 調整數值觀察比例變化
+5. 放大或縮小比例
+6. 建立等比例關係
+7. 理解比與比值的差異
+8. 觀察正比例變化
+9. 透過圖形理解比例關係
+10. 利用生活情境練習比例概念
+
+請優先協助學生：
+
+• 引導學生理解比例代表的意義，而不是只教公式。
+• 鼓勵學生觀察兩組數量之間的關係。
+• 若學生詢問「下一步怎麼做」、「這個按鈕做什麼」、「我要怎麼完成」，請依照目前比例教具的功能回答。
+• 可以提供生活化例子，例如飲料調配、地圖比例尺、食譜配方、照片縮放、人數分組等情境。
+• 若學生遇到比值計算問題，可一步一步引導，不直接公布完整答案。
+• 回答內容需符合國小高年級學生程度，避免使用過於艱深的數學術語。
+
+如果學生詢問與目前比例教具完全無關的內容，可以提醒他目前正在使用「比例探索實驗室」，並引導回目前的學習內容。
+`
+
+};
+
+</script>
+
+<script src="../ai.js"></script>
+
+
 </body>
 </html>

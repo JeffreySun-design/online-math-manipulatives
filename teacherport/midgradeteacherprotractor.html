@@ -333,5 +333,84 @@
             }
         }
     </script>
+
+
+<!-- AI 助教 -->
+<div id="aiBox"
+     style="position:fixed;
+            right:20px;
+            bottom:20px;
+            width:350px;
+            background:white;
+            border:1px solid #ccc;
+            border-radius:10px;
+            padding:10px;
+            box-shadow:0 0 10px rgba(0,0,0,.2);
+            z-index:9999;">
+
+    <div id="chat"
+         style="height:250px;
+                overflow-y:auto;
+                margin-bottom:10px;
+                border:1px solid #ddd;
+                padding:8px;">
+    </div>
+
+    <input id="question"
+           type="text"
+           placeholder="請輸入數學問題..."
+           style="width:100%;padding:8px;">
+
+    <button id="sendBtn"
+            style="margin-top:8px;width:100%;">
+        送出
+    </button>
+
+</div>
+<script>
+
+// 告訴 AI 目前是哪一個教具
+window.aiInfo = {
+
+    module: "角度",
+
+    grade: "中年級（三、四年級）",
+
+    description: `
+你目前位於「角度」。
+
+這是一個國小中年級數學互動教具，主要透過量角器與角度操作，幫助學生理解角的概念、測量角度以及畫出指定角度。
+
+教具提供的功能包括：
+
+1. 使用量角器測量角度
+2. 畫出指定角度
+3. 拖曳角的兩條邊
+4. 觀察角度大小變化
+5. 比較不同角度
+6. 辨認銳角、直角、鈍角
+7. 練習角度測量
+8. 修正角度大小
+9. 驗證答案
+10. 自由操作角度
+
+請優先協助學生：
+
+• 引導學生觀察角的開口大小，而不是只看線段長短。
+• 鼓勵學生利用量角器完成測量。
+• 若學生詢問「下一步怎麼做」、「這個按鈕做什麼」、「我要怎麼完成」，請依照目前教具功能回答。
+• 可以利用時鐘、剪刀、門、書本等生活情境舉例。
+• 回答內容需符合國小中年級學生程度，避免使用艱深術語。
+• 回答盡量簡短自然，不要一次講很多。
+
+如果學生詢問與目前教具無關的內容，可以提醒他目前正在使用「角度」，並引導回角度學習。
+`
+
+};
+
+</script>
+
+<script src="../ai.js"></script>
+
 </body>
 </html>

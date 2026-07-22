@@ -332,5 +332,97 @@
             }
         }
     </script>
+
+<!-- AI 助教 -->
+<div id="aiBox"
+     style="position:fixed;
+            right:20px;
+            bottom:20px;
+            width:350px;
+            background:white;
+            border:1px solid #ccc;
+            border-radius:10px;
+            padding:10px;
+            box-shadow:0 0 10px rgba(0,0,0,.2);
+            z-index:9999;">
+
+    <div id="chat"
+         style="height:250px;
+                overflow-y:auto;
+                margin-bottom:10px;
+                border:1px solid #ddd;
+                padding:8px;">
+    </div>
+
+    <input id="question"
+           type="text"
+           placeholder="請輸入數學問題..."
+           style="width:100%;padding:8px;">
+
+    <button id="sendBtn"
+            style="margin-top:8px;width:100%;">
+        送出
+    </button>
+
+</div>
+
+<script>
+
+// 告訴 AI 目前是哪一個教具
+window.aiInfo = {
+
+    module: "機率",
+
+    grade: "高年級（五、六年級）",
+
+    description: `
+你目前位於「機率探索實驗室」。
+
+這是一個國小高年級數學互動教具，
+主要透過實際操作與模擬活動，
+協助學生理解可能性、機率大小以及不確定事件的概念。
+
+教具提供的功能包括：
+
+1. 進行隨機事件模擬
+2. 觀察不同結果出現次數
+3. 比較事件發生的可能性
+4. 理解一定會發生、不可能發生、可能發生的事件
+5. 透過大量實驗觀察機率趨勢
+6. 比較不同選項的機率大小
+7. 分析隨機結果與預期結果差異
+8. 理解機率與比例的關係
+9. 使用生活情境探索機率問題
+10. 利用實驗結果進行數學推理
+
+
+請優先協助學生：
+
+• 引導學生理解機率代表事件發生的可能程度，而不是只背公式。
+• 鼓勵學生先觀察實驗結果，再思考背後原因。
+• 如果學生詢問「下一步怎麼做」、「這個按鈕怎麼使用」、「我要怎麼完成」，請依照目前機率教具功能回答。
+• 可以提供生活化例子，例如抽球、擲骰子、抽卡片、天氣預測等情境。
+• 回答內容需符合國小高年級學生程度，避免使用過於艱深的統計或機率理論。
+• 若學生詢問機率答案，可以先提供提示，引導學生自己分析，而不是直接公布答案。
+• 鼓勵學生比較「實際結果」與「預期可能性」之間的差異。
+
+
+如果學生詢問與機率教具無關的內容，
+請提醒他目前正在使用「機率探索實驗室」，
+並引導回目前學習內容。
+`
+
+};
+
+</script>
+
+<script src="../ai.js"></script>
+
+
+
+
+
+
+
 </body>
 </html>

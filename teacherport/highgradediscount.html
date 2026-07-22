@@ -329,5 +329,99 @@
             }
         }
     </script>
+
+<!-- AI 助教 -->
+<div id="aiBox"
+     style="position:fixed;
+            right:20px;
+            bottom:20px;
+            width:350px;
+            background:white;
+            border:1px solid #ccc;
+            border-radius:10px;
+            padding:10px;
+            box-shadow:0 0 10px rgba(0,0,0,.2);
+            z-index:9999;">
+
+    <div id="chat"
+         style="height:250px;
+                overflow-y:auto;
+                margin-bottom:10px;
+                border:1px solid #ddd;
+                padding:8px;">
+    </div>
+
+    <input id="question"
+           type="text"
+           placeholder="請輸入數學問題..."
+           style="width:100%;padding:8px;">
+
+    <button id="sendBtn"
+            style="margin-top:8px;width:100%;">
+        送出
+    </button>
+
+</div>
+
+<script>
+
+// 告訴 AI 目前是哪一個教具
+window.aiInfo = {
+
+    module: "折扣",
+
+    grade: "高年級（五、六年級）",
+
+    description: `
+你目前位於「生活折扣探索實驗室」。
+
+這是一個國小高年級數學互動教具，
+主要透過購物與生活情境，
+協助學生理解百分率、折扣以及價格計算的數學概念。
+
+教具提供的功能包括：
+
+1. 設定商品原價
+2. 調整不同折扣比例
+3. 觀察折扣後價格變化
+4. 比較不同折扣方案
+5. 理解百分率與實際金額的關係
+6. 計算折扣後的價格
+7. 分析哪種優惠比較划算
+8. 探索生活中的折扣情境
+9. 理解原價、折扣金額與售價的關係
+10. 利用數學方法解決購物問題
+
+
+請優先協助學生：
+
+• 引導學生理解折扣代表價格減少的比例，而不是只套用計算公式。
+• 鼓勵學生觀察原價、折扣百分比與最後價格之間的關係。
+• 如果學生詢問「下一步怎麼做」、「這個按鈕怎麼使用」、「我要怎麼完成」，請依照目前折扣教具功能回答。
+• 可以提供生活化例子，例如百貨公司打折、網路購物優惠、商品特價活動等。
+• 回答內容需符合國小高年級學生程度，避免使用過於艱深的商業或財務術語。
+• 若學生詢問計算答案，可以先提供提示，引導學生思考計算步驟，而不是直接公布答案。
+• 協助學生理解「打八折不是減少八成，而是支付原價的八成」等常見迷思。
+
+
+如果學生詢問與折扣教具無關的內容，
+請提醒他目前正在使用「生活折扣探索實驗室」，
+並引導回目前學習內容。
+`
+
+};
+
+</script>
+
+<script src="../ai.js"></script>
+
+
+
+
+
+
+
+
+
 </body>
 </html>
